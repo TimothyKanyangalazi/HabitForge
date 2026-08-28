@@ -92,12 +92,14 @@ export default function RootLayout() {
         <Stack.Screen name="habit/edit" options={{ presentation: 'modal', title: 'Edit Habit' }} />
         <Stack.Screen name="routine/create" options={{ presentation: 'modal', title: 'Create Routine' }} />
         <Stack.Screen name="routine/[id]" options={{ title: 'Routine Details' }} />
-        <Stack.Screen name="routine/templates" options={{ title: 'Routine Templates' }} />
+        <Stack.Screen name="routine/edit" options={{ presentation: 'modal', title: 'Edit Routine' }} />
         <Stack.Screen name="excuses/index" options={{ title: 'Excuse Log' }} />
         <Stack.Screen name="excuses/create" options={{ presentation: 'modal', title: 'Log Excuse' }} />
         <Stack.Screen name="excuses/[id]" options={{ title: 'Excuse Details' }} />
         <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="streaks" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications-settings" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

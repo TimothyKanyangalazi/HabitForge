@@ -62,9 +62,7 @@ export const excuseService = {
     if (excuse.reality_check !== undefined) { updates.push('reality_check = ?'); values.push(excuse.reality_check); }
     if (excuse.action_next_time !== undefined) { updates.push('action_next_time = ?'); values.push(excuse.action_next_time); }
 
-    updates.push('updated_at = datetime("now")');
     values.push(id);
-
     await db.runAsync(
       `UPDATE excuses SET ${updates.join(', ')} WHERE id = ?`,
       values
@@ -88,6 +86,51 @@ export const excuseService = {
        ORDER BY count DESC
        LIMIT ?`,
       [limit]
+    );
+  },
+
+  // Get excuses by category
+  async getByCategory(category: string): Promise<Excuse[]> {
+    const db = getDatabase();
+    return await db.getAllAsync<Excuse>(
+      'SELECT * FROM excuses WHERE category = ? ORDER BY created_at DESC',
+      [category]
+    );
+  },
+
+  // Search excuses
+  async searchExcuses(query: string): Promise<Excuse[]> {
+    const db = getDatabase();
+    return await db.getAllAsync<Excuse>(
+      'SELECT * FROM excuses WHERE text LIKE ? ORDER BY created_at DESC',
+      [`%${query}%`]
+    );
+  },
+
+  // Get predefined excuses by type
+  async getPredefinedByType(type: 'time' | 'energy' | 'motivation' | 'common'): Promise<Excuse[]> {
+    const db = getDatabase();
+    let excuseTexts: string[] = [];
+    
+    switch (type) {
+      case 'time':
+        excuseTexts = ['No time', 'Forgot', 'Busy'];
+        break;
+      case 'energy':
+        excuseTexts = ['Too tired', 'Too difficult'];
+        break;
+      case 'motivation':
+        excuseTexts = ['No motivation', "Didn't feel like it", 'Procrastination'];
+        break;
+      case 'common':
+        excuseTexts = ['Too tired', 'No time', 'Busy'];
+        break;
+    }
+
+    const placeholders = excuseTexts.map(() => '?').join(',');
+    return await db.getAllAsync<Excuse>(
+      `SELECT * FROM excuses WHERE category = 'predefined' AND text IN (${placeholders}) ORDER BY id`,
+      excuseTexts
     );
   },
 };

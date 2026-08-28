@@ -144,4 +144,58 @@ export const routineService = {
     );
     return result.lastInsertRowId;
   },
+
+  // Get logs for a specific date
+  async getLogsByDate(date: string): Promise<RoutineLog[]> {
+    const db = getDatabase();
+    return await db.getAllAsync<RoutineLog>(
+      'SELECT * FROM routine_logs WHERE log_date = ?',
+      [date]
+    );
+  },
+
+  // Get logs for a specific task
+  async getLogsByTask(taskId: number): Promise<RoutineLog[]> {
+    const db = getDatabase();
+    return await db.getAllAsync<RoutineLog>(
+      'SELECT * FROM routine_logs WHERE routine_task_id = ? ORDER BY log_date DESC',
+      [taskId]
+    );
+  },
+
+  // Get routine progress for a date
+  async getRoutineProgress(routineId: number, date: string): Promise<{
+    total: number;
+    completed: number;
+    percentage: number;
+  }> {
+    const db = getDatabase();
+    const result = await db.getAllAsync<{ total: number; completed: number }>(
+      `SELECT 
+        COUNT(DISTINCT rt.id) as total,
+        COUNT(DISTINCT CASE WHEN rl.status = 'completed' THEN rt.id END) as completed
+       FROM routine_tasks rt
+       LEFT JOIN routine_logs rl ON rt.id = rl.routine_task_id AND rl.log_date = ?
+       WHERE rt.routine_id = ?`,
+      [date, routineId]
+    );
+
+    const total = result[0]?.total || 0;
+    const completed = result[0]?.completed || 0;
+    const percentage = total > 0 ? (completed / total) * 100 : 0;
+
+    return { total, completed, percentage };
+  },
+
+  // Reorder tasks
+  async reorderTasks(routineId: number, taskIds: number[]): Promise<void> {
+    const db = getDatabase();
+    
+    for (let i = 0; i < taskIds.length; i++) {
+      await db.runAsync(
+        'UPDATE routine_tasks SET order_index = ? WHERE id = ? AND routine_id = ?',
+        [i, taskIds[i], routineId]
+      );
+    }
+  },
 };
