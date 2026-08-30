@@ -25,5 +25,3 @@ Tech Stack
 - Zustand
 
 
-# Start development
-npx expo start
