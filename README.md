@@ -15,7 +15,7 @@ Track habits, build routines, and understand your excuses to become the best ver
 
 Download APK
 
-[Download Latest APK](https://github.com/TimothyKan /HabitForge/releases/latest)
+[Download Latest APK](https://github.com/TimothyKannyangalazi/HabitForge/releases/latest)
 
 Tech Stack
 - React Native
