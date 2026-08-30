@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { useExcuseStore } from '../../stores/excuseStore';
 import { Excuse } from '../../types';
+import { lightTheme } from '../../theme';
 
 interface PredefinedExcusesProps {
   visible: boolean;
@@ -16,7 +17,9 @@ export const PredefinedExcuses: React.FC<PredefinedExcusesProps> = ({
   onClose,
   onSelect,
 }) => {
-  const theme = useTheme();
+   const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   const { predefinedExcuses } = useExcuseStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');

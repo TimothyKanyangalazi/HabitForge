@@ -1,11 +1,20 @@
-import {colors} from './colors';
-import {typography} from './typography';
-import {spacing} from './spacing';
+import { lightColors, darkColors } from './colors';
+import { spacing } from './spacing';
+import { typography } from './typography';
 
-export const theme = {
-  colors,
-  typography,
+export const lightTheme = {
+  colors: lightColors,
   spacing,
+  typography,
+  dark: false,
 };
 
-export type Theme = typeof theme;
+export const darkTheme = {
+  colors: darkColors,
+  spacing,
+  typography,
+  dark: true,
+};
+
+export type Theme = typeof lightTheme;
+export type ThemeColors = typeof lightColors;

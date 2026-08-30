@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
+import { lightTheme } from '../../theme';
 
 interface SelectionCardProps {
   title: string;
@@ -18,7 +19,9 @@ export const SelectionCard: React.FC<SelectionCardProps> = ({
   selected,
   onPress,
 }) => {
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
 
   return (
     <Pressable

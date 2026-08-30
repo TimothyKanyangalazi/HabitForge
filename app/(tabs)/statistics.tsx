@@ -13,6 +13,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/theme/ThemeContext';
+import { lightTheme } from '../../src/theme';
 import { statisticsService } from '../../src/services/statisticsService';
 import { BarChart } from '../../src/components/Charts/BarChart';
 import { CalendarHeatmap } from '../../src/components/Charts/CalendarHeatmap';
@@ -23,7 +24,10 @@ const { width } = Dimensions.get('window');
 type TabType = 'daily' | 'weekly' | 'monthly';
 
 export default function StatisticsScreen() {
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
+  
   const [activeTab, setActiveTab] = useState<TabType>('weekly');
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, completed: 0, missed: 0 });
@@ -35,22 +39,12 @@ export default function StatisticsScreen() {
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
-  const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
+  const headerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadData();
     animateIn();
   }, []);
-
-  useEffect(() => {
-    // Animate tab indicator when tab changes
-    Animated.spring(tabIndicatorAnim, {
-      toValue: activeTab === 'daily' ? 0 : activeTab === 'weekly' ? 1 : 2,
-      friction: 8,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  }, [activeTab]);
 
   const animateIn = () => {
     Animated.parallel([
@@ -67,6 +61,14 @@ export default function StatisticsScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    Animated.spring(headerAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 40,
+      delay: 200,
+      useNativeDriver: true,
+    }).start();
   };
 
   const loadData = async () => {
@@ -124,49 +126,49 @@ export default function StatisticsScreen() {
       case 'daily':
         return (
           <Animated.View style={[styles.tabContent, { opacity: fadeAnim }]}>
-            <Text style={[styles.tabTitle, { color: theme.colors.text }]}>
+            <Text style={[styles.tabTitle, { color: colors.text }]}>
               Today's Overview
             </Text>
             <View style={styles.statsGrid}>
               <LinearGradient
-                colors={[theme.colors.success + '20', theme.colors.success + '05']}
+                colors={[colors.success + '20', colors.success + '05']}
                 style={styles.statCard}
               >
-                <View style={[styles.statIconContainer, { backgroundColor: theme.colors.success + '20' }]}>
-                  <Ionicons name="checkmark-circle" size={24} color={theme.colors.success} />
+                <View style={[styles.statIconContainer, { backgroundColor: colors.success + '20' }]}>
+                  <Ionicons name="checkmark-circle" size={24} color={colors.success} />
                 </View>
-                <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                <Text style={[styles.statValue, { color: colors.text }]}>
                   {monthlyStats.completed}
                 </Text>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
                   Completed
                 </Text>
               </LinearGradient>
               
               <LinearGradient
-                colors={[theme.colors.danger + '20', theme.colors.danger + '05']}
+                colors={[colors.danger + '20', colors.danger + '05']}
                 style={styles.statCard}
               >
-                <View style={[styles.statIconContainer, { backgroundColor: theme.colors.danger + '20' }]}>
-                  <Ionicons name="close-circle" size={24} color={theme.colors.danger} />
+                <View style={[styles.statIconContainer, { backgroundColor: colors.danger + '20' }]}>
+                  <Ionicons name="close-circle" size={24} color={colors.danger} />
                 </View>
-                <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                <Text style={[styles.statValue, { color: colors.text }]}>
                   {monthlyStats.missed}
                 </Text>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
                   Missed
                 </Text>
               </LinearGradient>
             </View>
 
-            <View style={[styles.insightCard, { backgroundColor: theme.colors.card }]}>
+            <View style={[styles.insightCard, { backgroundColor: colors.card }]}>
               <View style={styles.insightHeader}>
-                <Ionicons name="bulb" size={20} color={theme.colors.warning} />
-                <Text style={[styles.insightTitle, { color: theme.colors.text }]}>
+                <Ionicons name="bulb" size={20} color={colors.warning} />
+                <Text style={[styles.insightTitle, { color: colors.text }]}>
                   Daily Insight
                 </Text>
               </View>
-              <Text style={[styles.insightText, { color: theme.colors.textSecondary }]}>
+              <Text style={[styles.insightText, { color: colors.textSecondary }]}>
                 {monthlyStats.completed > monthlyStats.missed
                   ? 'Great job! You\'re completing more habits than missing them.'
                   : 'Try to focus on completing at least one habit today.'}
@@ -178,16 +180,16 @@ export default function StatisticsScreen() {
       case 'weekly':
         return (
           <Animated.View style={[styles.tabContent, { opacity: fadeAnim }]}>
-            <Text style={[styles.tabTitle, { color: theme.colors.text }]}>
+            <Text style={[styles.tabTitle, { color: colors.text }]}>
               Weekly Performance
             </Text>
             
-            <View style={[styles.chartCard, { backgroundColor: theme.colors.card }]}>
+            <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <View style={styles.chartHeader}>
-                <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
+                <Text style={[styles.chartTitle, { color: colors.text }]}>
                   Completion Rate
                 </Text>
-                <Text style={[styles.chartSubtitle, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
                   Last 7 days
                 </Text>
               </View>
@@ -196,43 +198,43 @@ export default function StatisticsScreen() {
             
             <View style={styles.statsGrid}>
               <LinearGradient
-                colors={[theme.colors.warning + '20', theme.colors.warning + '05']}
+                colors={[colors.warning + '20', colors.warning + '05']}
                 style={styles.statCard}
               >
-                <View style={[styles.statIconContainer, { backgroundColor: theme.colors.warning + '20' }]}>
-                  <Ionicons name="trophy" size={24} color={theme.colors.warning} />
+                <View style={[styles.statIconContainer, { backgroundColor: colors.warning + '20' }]}>
+                  <Ionicons name="trophy" size={24} color={colors.warning} />
                 </View>
-                <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                <Text style={[styles.statValue, { color: colors.text }]}>
                   {bestDay.label}
                 </Text>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
                   Best Day
                 </Text>
               </LinearGradient>
               
               <LinearGradient
-                colors={[theme.colors.primary + '20', theme.colors.primary + '05']}
+                colors={[colors.primary + '20', colors.primary + '05']}
                 style={styles.statCard}
               >
-                <View style={[styles.statIconContainer, { backgroundColor: theme.colors.primary + '20' }]}>
-                  <Ionicons name="trending-up" size={24} color={theme.colors.primary} />
+                <View style={[styles.statIconContainer, { backgroundColor: colors.primary + '20' }]}>
+                  <Ionicons name="trending-up" size={24} color={colors.primary} />
                 </View>
-                <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                <Text style={[styles.statValue, { color: colors.text }]}>
                   {avgCompletion.toFixed(0)}%
                 </Text>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
                   Avg Completion
                 </Text>
               </LinearGradient>
             </View>
 
-            <View style={[styles.totalCard, { backgroundColor: theme.colors.card }]}>
-              <Ionicons name="checkmark-done" size={24} color={theme.colors.success} />
+            <View style={[styles.totalCard, { backgroundColor: colors.card }]}>
+              <Ionicons name="checkmark-done" size={24} color={colors.success} />
               <View style={styles.totalContent}>
-                <Text style={[styles.totalValue, { color: theme.colors.text }]}>
+                <Text style={[styles.totalValue, { color: colors.text }]}>
                   {totalCompletedThisWeek}
                 </Text>
-                <Text style={[styles.totalLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>
                   Total habits completed this week
                 </Text>
               </View>
@@ -243,24 +245,24 @@ export default function StatisticsScreen() {
       case 'monthly':
         return (
           <Animated.View style={[styles.tabContent, { opacity: fadeAnim }]}>
-            <Text style={[styles.tabTitle, { color: theme.colors.text }]}>
+            <Text style={[styles.tabTitle, { color: colors.text }]}>
               Monthly Heatmap
             </Text>
             
-            <View style={[styles.chartCard, { backgroundColor: theme.colors.card }]}>
+            <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <View style={styles.chartHeader}>
-                <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
+                <Text style={[styles.chartTitle, { color: colors.text }]}>
                   Completion Heatmap
                 </Text>
-                <Text style={[styles.chartSubtitle, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
                   Last 30 days
                 </Text>
               </View>
               <CalendarHeatmap data={heatmapData} days={30} />
             </View>
 
-            <View style={[styles.legendContainer, { backgroundColor: theme.colors.card }]}>
-              <Text style={[styles.legendLabel, { color: theme.colors.textSecondary }]}>
+            <View style={[styles.legendContainer, { backgroundColor: colors.card }]}>
+              <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
                 Less
               </Text>
               {[0, 25, 50, 75, 100].map((value) => (
@@ -270,13 +272,14 @@ export default function StatisticsScreen() {
                     styles.legendBox,
                     {
                       backgroundColor: value === 0 
-                        ? theme.colors.border 
-                        : theme.colors.primary + Math.floor(value * 2.55).toString(16).padStart(2, '0'),
+                        ? colors.border 
+                        : colors.primary,
+                      opacity: value === 0 ? 1 : value / 100,
                     },
                   ]}
                 />
               ))}
-              <Text style={[styles.legendLabel, { color: theme.colors.textSecondary }]}>
+              <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
                 More
               </Text>
             </View>
@@ -287,9 +290,9 @@ export default function StatisticsScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-        <Animated.View style={[styles.loadingSpinner, { borderColor: theme.colors.primary }]} />
-        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Animated.View style={[styles.loadingSpinner, { borderColor: colors.primary }]} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
           Loading statistics...
         </Text>
       </View>
@@ -298,14 +301,14 @@ export default function StatisticsScreen() {
 
   return (
     <ScrollView 
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor={theme.colors.primary}
-          colors={[theme.colors.primary]}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
         />
       }
     >
@@ -314,30 +317,45 @@ export default function StatisticsScreen() {
         transform: [{ translateY: slideAnim }],
       }}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.text }]}>
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              opacity: headerAnim,
+              transform: [
+                { 
+                  translateY: headerAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }) 
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={[styles.title, { color: colors.text }]}>
             Statistics
           </Text>
-          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Track your progress over time
           </Text>
-        </View>
+        </Animated.View>
 
         {/* Tabs */}
-        <View style={[styles.tabsContainer, { backgroundColor: theme.colors.card }]}>
+        <View style={[styles.tabsContainer, { backgroundColor: colors.card }]}>
           {[
             { key: 'daily', label: 'Daily', icon: 'today-outline' },
             { key: 'weekly', label: 'Weekly', icon: 'calendar-outline' },
             { key: 'monthly', label: 'Monthly', icon: 'grid-outline' },
-          ].map((tab, index) => (
+          ].map((tab) => (
             <Pressable
               key={tab.key}
               onPress={() => setActiveTab(tab.key as TabType)}
               style={[
                 styles.tab,
                 activeTab === tab.key && { 
-                  backgroundColor: theme.colors.primary,
-                  shadowColor: theme.colors.primary,
+                  backgroundColor: colors.primary,
+                  shadowColor: colors.primary,
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.3,
                   shadowRadius: 4,
@@ -348,12 +366,12 @@ export default function StatisticsScreen() {
               <Ionicons
                 name={tab.icon as any}
                 size={18}
-                color={activeTab === tab.key ? '#fff' : theme.colors.textSecondary}
+                color={activeTab === tab.key ? '#fff' : colors.textSecondary}
               />
               <Text
                 style={[
                   styles.tabText,
-                  { color: activeTab === tab.key ? '#fff' : theme.colors.textSecondary },
+                  { color: activeTab === tab.key ? '#fff' : colors.textSecondary },
                 ]}
               >
                 {tab.label}
@@ -369,56 +387,56 @@ export default function StatisticsScreen() {
         {habitTrends.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
                 Top Habits
               </Text>
-              <Ionicons name="podium" size={20} color={theme.colors.primary} />
+              <Ionicons name="podium" size={20} color={colors.primary} />
             </View>
             {habitTrends.map((habit, index) => {
               const maxCount = habitTrends[0]?.completed_count || 1;
               const percentage = ((habit.completed_count || 0) / maxCount) * 100;
               
               return (
-                <View key={index} style={[styles.trendItem, { backgroundColor: theme.colors.card }]}>
+                <View key={index} style={[styles.trendItem, { backgroundColor: colors.card }]}>
                   <View style={[
                     styles.trendRank, 
                     { 
                       backgroundColor: index === 0 
-                        ? theme.colors.warning + '20' 
-                        : theme.colors.primary + '15',
+                        ? colors.warning + '20' 
+                        : colors.primary + '15',
                     },
                   ]}>
                     <Text style={[
                       styles.trendRankText, 
                       { 
                         color: index === 0 
-                          ? theme.colors.warning 
-                          : theme.colors.primary,
+                          ? colors.warning 
+                          : colors.primary,
                       },
                     ]}>
                       #{index + 1}
                     </Text>
                   </View>
-                  <View style={[styles.trendIcon, { backgroundColor: theme.colors.primary + '10' }]}>
-                    <Ionicons name={habit.icon as any} size={18} color={theme.colors.primary} />
+                  <View style={[styles.trendIcon, { backgroundColor: colors.primary + '10' }]}>
+                    <Ionicons name={habit.icon as any} size={18} color={colors.primary} />
                   </View>
                   <View style={styles.trendContent}>
-                    <Text style={[styles.trendName, { color: theme.colors.text }]}>
+                    <Text style={[styles.trendName, { color: colors.text }]}>
                       {habit.name}
                     </Text>
-                    <View style={[styles.trendProgressBar, { backgroundColor: theme.colors.border }]}>
+                    <View style={[styles.trendProgressBar, { backgroundColor: colors.border }]}>
                       <View 
                         style={[
                           styles.trendProgressFill, 
                           { 
                             width: `${percentage}%`,
-                            backgroundColor: index === 0 ? theme.colors.warning : theme.colors.primary,
+                            backgroundColor: index === 0 ? colors.warning : colors.primary,
                           },
                         ]} 
                       />
                     </View>
                   </View>
-                  <Text style={[styles.trendCount, { color: theme.colors.textSecondary }]}>
+                  <Text style={[styles.trendCount, { color: colors.textSecondary }]}>
                     {habit.completed_count || 0}x
                   </Text>
                 </View>
@@ -431,22 +449,22 @@ export default function StatisticsScreen() {
         {excusePatterns.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
                 Common Excuses
               </Text>
-              <Ionicons name="warning" size={20} color={theme.colors.danger} />
+              <Ionicons name="warning" size={20} color={colors.danger} />
             </View>
-            <View style={[styles.excuseCard, { backgroundColor: theme.colors.card }]}>
+            <View style={[styles.excuseCard, { backgroundColor: colors.card }]}>
               {excusePatterns.map((excuse, index) => (
                 <View key={index} style={styles.excuseItem}>
-                  <View style={[styles.excuseIcon, { backgroundColor: theme.colors.danger + '10' }]}>
-                    <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
+                  <View style={[styles.excuseIcon, { backgroundColor: colors.danger + '10' }]}>
+                    <Ionicons name="alert-circle" size={18} color={colors.danger} />
                   </View>
-                  <Text style={[styles.excuseText, { color: theme.colors.text }]}>
+                  <Text style={[styles.excuseText, { color: colors.text }]}>
                     {excuse.text}
                   </Text>
-                  <View style={[styles.excuseBadge, { backgroundColor: theme.colors.danger + '15' }]}>
-                    <Text style={[styles.excuseCount, { color: theme.colors.danger }]}>
+                  <View style={[styles.excuseBadge, { backgroundColor: colors.danger + '15' }]}>
+                    <Text style={[styles.excuseCount, { color: colors.danger }]}>
                       {excuse.count}x
                     </Text>
                   </View>
@@ -463,14 +481,8 @@ export default function StatisticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingSpinner: {
     width: 40,
     height: 40,
@@ -478,23 +490,14 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderTopColor: 'transparent',
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 14,
-  },
+  loadingText: { marginTop: 16, fontSize: 14 },
   header: {
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-  },
+  title: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 },
+  subtitle: { fontSize: 14 },
   tabsContainer: {
     flexDirection: 'row',
     marginHorizontal: 20,
@@ -511,22 +514,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 6,
   },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  tabContent: {
-    paddingHorizontal: 20,
-  },
-  tabTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
+  tabText: { fontSize: 13, fontWeight: '600' },
+  tabContent: { paddingHorizontal: 20 },
+  tabTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
   chartCard: {
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   chartHeader: {
     flexDirection: 'row',
@@ -534,18 +533,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  chartTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  chartSubtitle: {
-    fontSize: 12,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
+  chartTitle: { fontSize: 15, fontWeight: '600' },
+  chartSubtitle: { fontSize: 12 },
+  statsGrid: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   statCard: {
     flex: 1,
     padding: 16,
@@ -560,14 +550,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-  },
+  statValue: { fontSize: 24, fontWeight: '800', marginBottom: 4 },
+  statLabel: { fontSize: 12 },
   insightCard: {
     borderRadius: 16,
     padding: 16,
@@ -579,14 +563,8 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 8,
   },
-  insightTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  insightText: {
-    fontSize: 13,
-    lineHeight: 20,
-  },
+  insightTitle: { fontSize: 15, fontWeight: '600' },
+  insightText: { fontSize: 13, lineHeight: 20 },
   totalCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -594,17 +572,9 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  totalContent: {
-    flex: 1,
-  },
-  totalValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  totalLabel: {
-    fontSize: 12,
-  },
+  totalContent: { flex: 1 },
+  totalValue: { fontSize: 24, fontWeight: '800', marginBottom: 2 },
+  totalLabel: { fontSize: 12 },
   legendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -613,28 +583,16 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 6,
   },
-  legendLabel: {
-    fontSize: 11,
-  },
-  legendBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginTop: 24,
-  },
+  legendLabel: { fontSize: 11 },
+  legendBox: { width: 20, height: 20, borderRadius: 4 },
+  section: { paddingHorizontal: 20, marginTop: 24 },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
+  sectionTitle: { fontSize: 18, fontWeight: '700' },
   trendItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -650,10 +608,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  trendRankText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+  trendRankText: { fontSize: 12, fontWeight: 'bold' },
   trendIcon: {
     width: 36,
     height: 36,
@@ -661,31 +616,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  trendContent: {
-    flex: 1,
-  },
-  trendName: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  trendProgressBar: {
-    height: 3,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  trendProgressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  trendCount: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  excuseCard: {
-    borderRadius: 16,
-    padding: 12,
-  },
+  trendContent: { flex: 1 },
+  trendName: { fontSize: 14, fontWeight: '600', marginBottom: 4 },
+  trendProgressBar: { height: 3, borderRadius: 2, overflow: 'hidden' },
+  trendProgressFill: { height: '100%', borderRadius: 2 },
+  trendCount: { fontSize: 13, fontWeight: '600' },
+  excuseCard: { borderRadius: 16, padding: 12 },
   excuseItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -699,17 +635,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  excuseText: {
-    flex: 1,
-    fontSize: 14,
-  },
+  excuseText: { flex: 1, fontSize: 14 },
   excuseBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  excuseCount: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+  excuseCount: { fontSize: 12, fontWeight: 'bold' },
 });

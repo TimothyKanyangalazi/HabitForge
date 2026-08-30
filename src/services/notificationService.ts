@@ -2,69 +2,77 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { getDatabase } from '../database/database';
+import Constants from 'expo-constants';
 
-// Configure notification handler
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Check if running in Expo Go
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Only configure notification handler if not in Expo Go
+if (!isExpoGo) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 export const notificationService = {
-  // Request permissions
-  async requestPermissions(): Promise<boolean> {
-    if (!Device.isDevice) {
-      console.log('Must use physical device for notifications');
+  // Check if notifications are supported
+  isNotificationsSupported(): boolean {
+    if (isExpoGo) {
+      console.log('ℹ️ Notifications disabled in Expo Go');
       return false;
     }
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for notification!');
-      return false;
-    }
-
-    return true;
+    return Device.isDevice;
   },
 
-  // Schedule a notification
-  async scheduleNotification({
-    title,
-    body,
-    hour,
-    minute,
-    repeat = 'daily',
-    data = {},
-  }: {
-    title: string;
-    body: string;
-    hour: number;
-    minute: number;
-    repeat?: 'daily' | 'weekly' | 'none';
-    data?: any;
-  }): Promise<string | null> {
+  // Request permissions - returns false in Expo Go
+  async requestPermissions(): Promise<boolean> {
+    if (isExpoGo) {
+      console.log('ℹ️ Skipping notification permissions in Expo Go');
+      return false;
+    }
+    
+    if (!Device.isDevice) {
+      return false;
+    }
+
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      return finalStatus === 'granted';
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+      return false;
+    }
+  },
+
+  // Schedule notification - returns null in Expo Go
+  async scheduleNotification(params: any): Promise<string | null> {
+    if (isExpoGo) {
+      console.log('ℹ️ Skipping notification scheduling in Expo Go');
+      return null;
+    }
+    
     try {
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) return null;
 
+      const { title, body, hour, minute, data = {} } = params;
+      
       const trigger: any = {
+        type: 'daily',
         hour,
         minute,
-        repeats: repeat !== 'none',
       };
-
-      if (repeat === 'weekly') {
-        trigger.weekday = data.weekday || 1; // Monday
-      }
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
@@ -76,7 +84,6 @@ export const notificationService = {
         trigger,
       });
 
-      console.log(`Notification scheduled: ${notificationId}`);
       return notificationId;
     } catch (error) {
       console.error('Error scheduling notification:', error);
@@ -84,155 +91,120 @@ export const notificationService = {
     }
   },
 
-  // Cancel a notification
+  // All other methods return null/false in Expo Go
+  async scheduleHabitReminder(...args: any[]): Promise<string | null> {
+    if (isExpoGo) return null;
+    const [habitId, habitName, reminderTime] = args;
+    const [hour, minute] = reminderTime.split(':').map(Number);
+    return this.scheduleNotification({
+      title: 'Habit Reminder',
+      body: `Time to complete: ${habitName}`,
+      hour,
+      minute,
+      data: { type: 'habit', habitId },
+    });
+  },
+
+  async scheduleRoutineReminder(...args: any[]): Promise<string | null> {
+    if (isExpoGo) return null;
+    const [routineId, routineName, startTime] = args;
+    const [hour, minute] = startTime.split(':').map(Number);
+    return this.scheduleNotification({
+      title: 'Routine Reminder',
+      body: `Time to start: ${routineName}`,
+      hour,
+      minute,
+      data: { type: 'routine', routineId },
+    });
+  },
+
+  async scheduleDailyReview(time: string = '21:00'): Promise<string | null> {
+    if (isExpoGo) return null;
+    const [hour, minute] = time.split(':').map(Number);
+    return this.scheduleNotification({
+      title: 'Daily Review',
+      body: 'Take a few minutes to review your day.',
+      hour,
+      minute,
+      data: { type: 'daily_review' },
+    });
+  },
+
+  async scheduleMorningMotivation(time: string = '08:00'): Promise<string | null> {
+    if (isExpoGo) return null;
+    const [hour, minute] = time.split(':').map(Number);
+    return this.scheduleNotification({
+      title: 'Good Morning!',
+      body: 'Start your day with purpose!',
+      hour,
+      minute,
+      data: { type: 'morning_motivation' },
+    });
+  },
+
   async cancelNotification(notificationId: string): Promise<void> {
+    if (isExpoGo) return;
     try {
       await Notifications.cancelScheduledNotificationAsync(notificationId);
-      console.log(`Notification cancelled: ${notificationId}`);
     } catch (error) {
       console.error('Error cancelling notification:', error);
     }
   },
 
-  // Cancel all notifications
   async cancelAllNotifications(): Promise<void> {
+    if (isExpoGo) return;
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
-      console.log('All notifications cancelled');
     } catch (error) {
       console.error('Error cancelling all notifications:', error);
     }
   },
 
-  // Schedule habit reminder
-  async scheduleHabitReminder(
-    habitId: number,
-    habitName: string,
-    reminderTime: string
-  ): Promise<string | null> {
-    const [hour, minute] = reminderTime.split(':').map(Number);
-    
-    return await this.scheduleNotification({
-      title: 'Habit Reminder',
-      body: `Time to complete: ${habitName}`,
-      hour,
-      minute,
-      repeat: 'daily',
-      data: { type: 'habit', habitId },
-    });
-  },
-
-  // Schedule routine reminder
-  async scheduleRoutineReminder(
-    routineId: number,
-    routineName: string,
-    startTime: string
-  ): Promise<string | null> {
-    const [hour, minute] = startTime.split(':').map(Number);
-    
-    return await this.scheduleNotification({
-      title: 'Routine Reminder',
-      body: `Time to start: ${routineName}`,
-      hour,
-      minute,
-      repeat: 'daily',
-      data: { type: 'routine', routineId },
-    });
-  },
-
-  // Schedule daily review reminder
-  async scheduleDailyReview(time: string = '21:00'): Promise<string | null> {
-    const [hour, minute] = time.split(':').map(Number);
-    
-    return await this.scheduleNotification({
-      title: 'Daily Review',
-      body: 'Take a few minutes to review your day and plan tomorrow.',
-      hour,
-      minute,
-      repeat: 'daily',
-      data: { type: 'daily_review' },
-    });
-  },
-
-  // Schedule morning motivation
-  async scheduleMorningMotivation(time: string = '08:00'): Promise<string | null> {
-    const [hour, minute] = time.split(':').map(Number);
-    
-    return await this.scheduleNotification({
-      title: 'Good Morning!',
-      body: 'Start your day with purpose. Complete your morning routine!',
-      hour,
-      minute,
-      repeat: 'daily',
-      data: { type: 'morning_motivation' },
-    });
-  },
-
-  // Get all scheduled notifications
-  async getAllScheduledNotifications() {
+  async getAllScheduledNotifications(): Promise<any[]> {
+    if (isExpoGo) return [];
     try {
       return await Notifications.getAllScheduledNotificationsAsync();
     } catch (error) {
-      console.error('Error getting scheduled notifications:', error);
+      console.error('Error getting notifications:', error);
       return [];
     }
   },
 
-  // Save notification to database
-  async saveNotificationToDatabase({
-    type,
-    title,
-    body,
-    scheduledTime,
-    notificationId,
-  }: {
-    type: string;
-    title: string;
-    body: string;
-    scheduledTime: string;
-    notificationId: string;
-  }): Promise<void> {
-    const db = getDatabase();
-    await db.runAsync(
-      `INSERT INTO notifications (type, title, body, scheduled_time, enabled)
-       VALUES (?, ?, ?, ?, 1)`,
-      [type, title, body, scheduledTime]
-    );
-  },
-
-  // Get notification settings from database
-  async getNotificationSettings() {
-    const db = getDatabase();
-    const result = await db.getAllAsync<{ key: string; value: string }>(
-      "SELECT key, value FROM settings WHERE key LIKE '%notification%' OR key LIKE '%reminder%'"
-    );
-    
-    const settings: Record<string, string> = {};
-    result.forEach(row => {
-      settings[row.key] = row.value;
-    });
-    
-    return settings;
-  },
-
-  // Initialize all notifications
   async initializeNotifications(): Promise<void> {
+    if (isExpoGo) {
+      console.log('ℹ️ Notifications initialization skipped in Expo Go');
+      return;
+    }
+    
     try {
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) return;
 
       const settings = await this.getNotificationSettings();
-      
       const dailyReminderTime = settings.daily_reminder_time || '08:00';
-      const weeklyReviewDay = settings.weekly_review_day || 'Sunday';
       
-      // Schedule daily reminders
       await this.scheduleMorningMotivation(dailyReminderTime);
       await this.scheduleDailyReview('21:00');
-      
-      console.log('Notifications initialized');
     } catch (error) {
       console.error('Error initializing notifications:', error);
+    }
+  },
+
+  async getNotificationSettings(): Promise<Record<string, string>> {
+    try {
+      const db = getDatabase();
+      const result = await db.getAllAsync<{ key: string; value: string }>(
+        "SELECT key, value FROM settings WHERE key LIKE '%notification%' OR key LIKE '%reminder%'"
+      );
+      
+      const settings: Record<string, string> = {};
+      result.forEach(row => {
+        settings[row.key] = row.value;
+      });
+      return settings;
+    } catch (error) {
+      console.error('Error getting settings:', error);
+      return {};
     }
   },
 };

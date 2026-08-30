@@ -15,9 +15,12 @@ import { useTheme } from '../src/theme/ThemeContext';
 import { statisticsService } from '../src/services/statisticsService';
 import { useHabitStore } from '../src/stores/habitStore';
 import { useRoutineStore } from '../src/stores/routineStore';
+import { lightTheme } from '../src/theme';
 
 export default function StreaksScreen() {
-  const theme = useTheme();
+   const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   const { habits } = useHabitStore();
   const { routines } = useRoutineStore();
   

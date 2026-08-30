@@ -2,7 +2,11 @@ import { Redirect } from 'expo-router';
 import { useSettingsStore } from '../src/stores/settingsStore';
 
 export default function Index() {
-  const { onboardingCompleted } = useSettingsStore();
+  const onboardingCompleted = useSettingsStore((state) => state.settings.onboardingCompleted);
   
-  return <Redirect href={onboardingCompleted ? '/(tabs)' : '/(auth)/welcome'} />;
+  if (onboardingCompleted) {
+    return <Redirect href="/(tabs)" />;
+  }
+  
+  return <Redirect href="/(auth)/welcome" />;
 }

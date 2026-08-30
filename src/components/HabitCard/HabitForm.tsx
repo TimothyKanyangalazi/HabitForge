@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
+import { lightTheme } from '../../theme';
 import { PrimaryButton } from '../common/PrimaryButton';
 import { Habit } from '../../types';
 
@@ -28,7 +29,7 @@ const DAYS = [
 ];
 
 const ICONS = [
-  'fitness', 'book', 'water', 'meditate', 'journal', 'code', 
+  'fitness', 'book', 'water', 'leaf', 'journal', 'code-slash', 
   'musical-notes', 'walk', 'bed', 'restaurant', 'briefcase', 'school'
 ];
 
@@ -37,7 +38,10 @@ export const HabitForm: React.FC<HabitFormProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors;
+  
   const [name, setName] = useState(initialValues?.name || '');
   const [description, setDescription] = useState(initialValues?.description || '');
   const [frequency, setFrequency] = useState(initialValues?.frequency_type || 'daily');
@@ -83,30 +87,30 @@ export const HabitForm: React.FC<HabitFormProps> = ({
   return (
     <ScrollView style={styles.container}>
       <View style={styles.section}>
-        <Text style={[styles.label, { color: theme.colors.text }]}>Habit Name</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Habit Name</Text>
         <TextInput
-          style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border }]}
+          style={[styles.input, { color: colors.text, borderColor: colors.border }]}
           value={name}
           onChangeText={setName}
           placeholder="e.g., Read 20 pages"
-          placeholderTextColor={theme.colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
         />
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.label, { color: theme.colors.text }]}>Description (Optional)</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Description (Optional)</Text>
         <TextInput
-          style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border }]}
+          style={[styles.input, { color: colors.text, borderColor: colors.border }]}
           value={description}
           onChangeText={setDescription}
           placeholder="Why do you want to build this habit?"
-          placeholderTextColor={theme.colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           multiline
         />
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.label, { color: theme.colors.text }]}>Frequency</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Frequency</Text>
         <View style={styles.frequencyContainer}>
           {FREQUENCIES.map(freq => (
             <Pressable
@@ -115,19 +119,19 @@ export const HabitForm: React.FC<HabitFormProps> = ({
               style={[
                 styles.frequencyButton,
                 {
-                  backgroundColor: frequency === freq.value ? theme.colors.primary : '#f5f5f5',
+                  backgroundColor: frequency === freq.value ? colors.primary : colors.card,
                 },
               ]}
             >
               <Ionicons
                 name={freq.icon as any}
                 size={20}
-                color={frequency === freq.value ? '#fff' : theme.colors.text}
+                color={frequency === freq.value ? '#fff' : colors.text}
               />
               <Text
                 style={[
                   styles.frequencyText,
-                  { color: frequency === freq.value ? '#fff' : theme.colors.text },
+                  { color: frequency === freq.value ? '#fff' : colors.text },
                 ]}
               >
                 {freq.label}
@@ -139,7 +143,7 @@ export const HabitForm: React.FC<HabitFormProps> = ({
 
       {frequency !== 'daily' && (
         <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>Select Days</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Select Days</Text>
           <View style={styles.daysContainer}>
             {DAYS.map(day => (
               <Pressable
@@ -149,14 +153,14 @@ export const HabitForm: React.FC<HabitFormProps> = ({
                   styles.dayButton,
                   {
                     backgroundColor: selectedDays.includes(day.value)
-                      ? theme.colors.primary
-                      : '#f5f5f5',
+                      ? colors.primary
+                      : colors.card,
                   },
                 ]}
               >
                 <Text
                   style={{
-                    color: selectedDays.includes(day.value) ? '#fff' : theme.colors.text,
+                    color: selectedDays.includes(day.value) ? '#fff' : colors.text,
                   }}
                 >
                   {day.label}
@@ -168,30 +172,30 @@ export const HabitForm: React.FC<HabitFormProps> = ({
       )}
 
       <View style={styles.section}>
-        <Text style={[styles.label, { color: theme.colors.text }]}>Reminder Time (Optional)</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Reminder Time (Optional)</Text>
         <TextInput
-          style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border }]}
+          style={[styles.input, { color: colors.text, borderColor: colors.border }]}
           value={reminderTime}
           onChangeText={setReminderTime}
           placeholder="08:00"
-          placeholderTextColor={theme.colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
         />
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.label, { color: theme.colors.text }]}>Daily Target</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Daily Target</Text>
         <TextInput
-          style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border }]}
+          style={[styles.input, { color: colors.text, borderColor: colors.border }]}
           value={targetCount}
           onChangeText={setTargetCount}
           keyboardType="numeric"
           placeholder="1"
-          placeholderTextColor={theme.colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
         />
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.label, { color: theme.colors.text }]}>Icon</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Icon</Text>
         <View style={styles.iconsContainer}>
           {ICONS.map(iconName => (
             <Pressable
@@ -200,14 +204,14 @@ export const HabitForm: React.FC<HabitFormProps> = ({
               style={[
                 styles.iconButton,
                 {
-                  backgroundColor: icon === iconName ? theme.colors.primary : '#f5f5f5',
+                  backgroundColor: icon === iconName ? colors.primary : colors.card,
                 },
               ]}
             >
               <Ionicons
                 name={iconName as any}
                 size={24}
-                color={icon === iconName ? '#fff' : theme.colors.text}
+                color={icon === iconName ? '#fff' : colors.text}
               />
             </Pressable>
           ))}

@@ -7,257 +7,115 @@ import {
   Pressable, 
   Switch,
   Animated,
-  Alert,
+  Easing,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useTheme } from '../src/theme/ThemeContext';
-import { useNotificationStore } from '../src/stores/notificationStore';
+import { lightTheme } from '../src/theme';
 import { useSettingsStore } from '../src/stores/settingsStore';
 
 export default function NotificationsSettingsScreen() {
-  const theme = useTheme();
-  const { 
-    hasPermission,
-    requestPermission,
-    scheduleHabitReminder,
-    scheduleRoutineReminder,
-    scheduleDailyReview,
-    scheduleMorningMotivation,
-    cancelAll,
-    getAllScheduled,
-    scheduledNotifications,
-  } = useNotificationStore();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   
   const { settings, updateSettings } = useSettingsStore();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(settings.notificationsEnabled ?? true);
   
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [habitReminders, setHabitReminders] = useState(true);
-  const [routineReminders, setRoutineReminders] = useState(true);
-  const [dailyReview, setDailyReview] = useState(true);
-  const [morningMotivation, setMorningMotivation] = useState(true);
-  
+  const isExpoGo = Constants.appOwnership === 'expo';
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
-    loadSettings();
-    animateIn();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
-
-  const animateIn = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const loadSettings = async () => {
-    const hasPermission = await requestPermission();
-    setNotificationsEnabled(hasPermission);
-    
-    // Load settings from store
-    setHabitReminders(settings.notificationsEnabled ?? true);
-    setRoutineReminders(settings.notificationsEnabled ?? true);
-  };
 
   const handleToggleNotifications = async (value: boolean) => {
     setNotificationsEnabled(value);
     await updateSettings({ notificationsEnabled: value });
-    
-    if (!value) {
-      await cancelAll();
-      Alert.alert('Notifications Disabled', 'All reminders have been cancelled.');
-    } else {
-      const hasPermission = await requestPermission();
-      if (hasPermission) {
-        Alert.alert('Notifications Enabled', 'Reminders will be scheduled.');
-      } else {
-        setNotificationsEnabled(false);
-        Alert.alert('Permission Denied', 'Please enable notifications in your device settings.');
-      }
-    }
-  };
-
-  const handleToggleHabitReminders = async (value: boolean) => {
-    setHabitReminders(value);
-    await updateSettings({ notificationsEnabled: value });
-  };
-
-  const handleToggleRoutineReminders = async (value: boolean) => {
-    setRoutineReminders(value);
-    await updateSettings({ notificationsEnabled: value });
-  };
-
-  const handleToggleDailyReview = async (value: boolean) => {
-    setDailyReview(value);
-    if (value) {
-      await scheduleDailyReview('21:00');
-    }
-  };
-
-  const handleToggleMorningMotivation = async (value: boolean) => {
-    setMorningMotivation(value);
-    if (value) {
-      await scheduleMorningMotivation('08:00');
-    }
   };
 
   return (
     <ScrollView 
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       showsVerticalScrollIndicator={false}
     >
-      <Animated.View style={{ opacity: fadeAnim }}>
+      <Animated.View
+        style={{
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        }}
+      >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+          <Pressable 
+            onPress={() => router.back()} 
+            style={({ pressed }) => [
+              styles.backButton,
+              { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
           </Pressable>
-          <Text style={[styles.title, { color: theme.colors.text }]}>
+          <Text style={[styles.title, { color: colors.text }]}>
             Notifications
           </Text>
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Master Toggle */}
-        <View style={[styles.masterCard, { backgroundColor: theme.colors.card }]}>
-          <View style={styles.masterIcon}>
-            <Ionicons name="notifications" size={28} color={theme.colors.primary} />
-          </View>
-          <View style={styles.masterContent}>
-            <Text style={[styles.masterTitle, { color: theme.colors.text }]}>
-              Enable Notifications
+        {/* Expo Go Info */}
+        {isExpoGo ? (
+          <View style={[styles.infoCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.infoIcon, { backgroundColor: colors.warning + '15' }]}>
+              <Ionicons name="information-circle" size={32} color={colors.warning} />
+            </View>
+            <Text style={[styles.infoTitle, { color: colors.text }]}>
+              Not Available in Expo Go
             </Text>
-            <Text style={[styles.masterSubtitle, { color: theme.colors.textSecondary }]}>
-              Receive reminders for your habits and routines
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+              Notifications require a development build. Build the APK to enable this feature.
             </Text>
-          </View>
-          <Switch
-            value={notificationsEnabled}
-            onValueChange={handleToggleNotifications}
-            trackColor={{ false: theme.colors.border, true: theme.colors.primary + '80' }}
-            thumbColor={notificationsEnabled ? theme.colors.primary : '#f4f3f4'}
-          />
-        </View>
-
-        {/* Notification Types */}
-        {notificationsEnabled && (
-          <View style={styles.settingsSection}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Reminder Types
-            </Text>
-            
-            <View style={[styles.settingsCard, { backgroundColor: theme.colors.card }]}>
-              {/* Habit Reminders */}
-              <View style={styles.settingItem}>
-                <View style={[styles.settingIcon, { backgroundColor: theme.colors.primary + '15' }]}>
-                  <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
-                </View>
-                <View style={styles.settingContent}>
-                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
-                    Habit Reminders
-                  </Text>
-                  <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
-                    Get reminded to complete your habits
-                  </Text>
-                </View>
-                <Switch
-                  value={habitReminders}
-                  onValueChange={handleToggleHabitReminders}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primary + '80' }}
-                  thumbColor={habitReminders ? theme.colors.primary : '#f4f3f4'}
-                />
-              </View>
-
-              {/* Routine Reminders */}
-              <View style={styles.settingItem}>
-                <View style={[styles.settingIcon, { backgroundColor: theme.colors.success + '15' }]}>
-                  <Ionicons name="list" size={20} color={theme.colors.success} />
-                </View>
-                <View style={styles.settingContent}>
-                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
-                    Routine Reminders
-                  </Text>
-                  <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
-                    Get reminded to start your routines
-                  </Text>
-                </View>
-                <Switch
-                  value={routineReminders}
-                  onValueChange={handleToggleRoutineReminders}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.success + '80' }}
-                  thumbColor={routineReminders ? theme.colors.success : '#f4f3f4'}
-                />
-              </View>
-
-              {/* Morning Motivation */}
-              <View style={styles.settingItem}>
-                <View style={[styles.settingIcon, { backgroundColor: theme.colors.warning + '15' }]}>
-                  <Ionicons name="sunny" size={20} color={theme.colors.warning} />
-                </View>
-                <View style={styles.settingContent}>
-                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
-                    Morning Motivation
-                  </Text>
-                  <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
-                    Start your day with a motivational message
-                  </Text>
-                </View>
-                <Switch
-                  value={morningMotivation}
-                  onValueChange={handleToggleMorningMotivation}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.warning + '80' }}
-                  thumbColor={morningMotivation ? theme.colors.warning : '#f4f3f4'}
-                />
-              </View>
-
-              {/* Daily Review */}
-              <View style={styles.settingItem}>
-                <View style={[styles.settingIcon, { backgroundColor: '#9C27B0' + '15' }]}>
-                  <Ionicons name="moon" size={20} color="#9C27B0" />
-                </View>
-                <View style={styles.settingContent}>
-                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
-                    Daily Review
-                  </Text>
-                  <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
-                    Review your day and plan for tomorrow
-                  </Text>
-                </View>
-                <Switch
-                  value={dailyReview}
-                  onValueChange={handleToggleDailyReview}
-                  trackColor={{ false: theme.colors.border, true: '#9C27B0' + '80' }}
-                  thumbColor={dailyReview ? '#9C27B0' : '#f4f3f4'}
-                />
-              </View>
+            <View style={[styles.infoBadge, { backgroundColor: colors.primary + '10' }]}>
+              <Ionicons name="build" size={14} color={colors.primary} />
+              <Text style={[styles.infoBadgeText, { color: colors.primary }]}>
+                Available in APK build
+              </Text>
             </View>
           </View>
-        )}
-
-        {/* Scheduled Notifications */}
-        {notificationsEnabled && scheduledNotifications.length > 0 && (
-          <View style={styles.settingsSection}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Scheduled Reminders
-            </Text>
-            
-            <View style={[styles.settingsCard, { backgroundColor: theme.colors.card }]}>
-              {scheduledNotifications.map((notification, index) => (
-                <View key={index} style={styles.scheduledItem}>
-                  <Ionicons name="time-outline" size={20} color={theme.colors.primary} />
-                  <View style={styles.scheduledContent}>
-                    <Text style={[styles.scheduledTitle, { color: theme.colors.text }]}>
-                      {notification.content?.title || 'Reminder'}
-                    </Text>
-                    <Text style={[styles.scheduledSubtitle, { color: theme.colors.textSecondary }]}>
-                      {notification.content?.body || ''}
-                    </Text>
-                  </View>
-                </View>
-              ))}
+        ) : (
+          <View style={[styles.masterCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.masterIcon, { backgroundColor: colors.primary + '15' }]}>
+              <Ionicons name="notifications" size={24} color={colors.primary} />
             </View>
+            <View style={styles.masterContent}>
+              <Text style={[styles.masterTitle, { color: colors.text }]}>
+                Enable Notifications
+              </Text>
+              <Text style={[styles.masterSubtitle, { color: colors.textSecondary }]}>
+                Receive reminders for your habits and routines
+              </Text>
+            </View>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={handleToggleNotifications}
+              trackColor={{ false: colors.border, true: colors.primary + '80' }}
+              thumbColor={notificationsEnabled ? colors.primary : '#f4f3f4'}
+            />
           </View>
         )}
 
@@ -268,9 +126,7 @@ export default function NotificationsSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -286,10 +142,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  title: { fontSize: 28, fontWeight: '800' },
+  infoCard: {
+    marginHorizontal: 20,
+    padding: 24,
+    borderRadius: 20,
+    alignItems: 'center',
+    gap: 8,
   },
+  infoIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  infoTitle: { fontSize: 18, fontWeight: '700' },
+  infoText: { fontSize: 14, textAlign: 'center', lineHeight: 20, paddingHorizontal: 20 },
+  infoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+    marginTop: 8,
+  },
+  infoBadgeText: { fontSize: 12, fontWeight: '600' },
   masterCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -299,78 +179,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   masterIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f0f0f0',
-  },
-  masterContent: {
-    flex: 1,
-  },
-  masterTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  masterSubtitle: {
-    fontSize: 12,
-  },
-  settingsSection: {
-    paddingHorizontal: 20,
-    marginTop: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  settingsCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    gap: 12,
-  },
-  settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  settingContent: {
-    flex: 1,
-  },
-  settingTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  settingSubtitle: {
-    fontSize: 12,
-  },
-  scheduledItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    gap: 12,
-  },
-  scheduledContent: {
-    flex: 1,
-  },
-  scheduledTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  scheduledSubtitle: {
-    fontSize: 12,
-  },
+  masterContent: { flex: 1 },
+  masterTitle: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  masterSubtitle: { fontSize: 12 },
 });

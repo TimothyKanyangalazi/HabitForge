@@ -1,38 +1,106 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  Pressable, 
+  Alert,
+  Animated,
+  Easing,
+  Dimensions,
+} from 'react-native';
 import { router } from 'expo-router';
-import { PrimaryButton } from '../../src/components/common/PrimaryButton';
-import { SelectionCard } from '../../src/components/common/SelectionCard';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../src/theme/ThemeContext';
+import { lightTheme } from '../../src/theme';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 
-const GOALS = [
-  { title: 'Build Discipline', icon: 'shield-checkmark', color: '#4A90E2' },
-  { title: 'Improve Health', icon: 'fitness', color: '#4CAF50' },
-  { title: 'Learn Skills', icon: 'book', color: '#2196F3' },
-  { title: 'Be Productive', icon: 'briefcase', color: '#FF9800' },
-  { title: 'Practice Mindfulness', icon: 'leaf', color: '#9C27B0' },
-  { title: 'Manage Time', icon: 'time', color: '#F44336' },
-];
+const { width } = Dimensions.get('window');
 
-const HABITS = [
-  'Wake up early',
-  'Exercise',
-  'Read 20 pages',
-  'Meditate',
-  'Drink water',
-  'Journal',
-  'Study',
-  'Code',
+const GOALS = [
+  { title: 'Build Discipline', icon: 'shield-checkmark', color: '#4A90E2', description: 'Stay consistent daily' },
+  { title: 'Improve Health', icon: 'fitness', color: '#4CAF50', description: 'Exercise and wellness' },
+  { title: 'Learn Skills', icon: 'book', color: '#2196F3', description: 'Grow your knowledge' },
+  { title: 'Be Productive', icon: 'briefcase', color: '#FF9800', description: 'Get things done' },
+  { title: 'Practice Mindfulness', icon: 'leaf', color: '#9C27B0', description: 'Find inner peace' },
 ];
 
 export default function OnboardingScreen() {
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   const { completeOnboarding, updateSettings } = useSettingsStore();
+  
   const [step, setStep] = useState(1);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-  const [selectedHabits, setSelectedHabits] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const titleAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const buttonAnim = useRef(new Animated.Value(0)).current;
+  const goalAnimations = useRef(GOALS.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    // Main entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Title animation
+    Animated.spring(titleAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 40,
+      delay: 200,
+      useNativeDriver: true,
+    }).start();
+
+    // Progress bar animation
+    Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: 800,
+      delay: 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    // Staggered goal animations
+    Animated.stagger(100, 
+      goalAnimations.map(anim => 
+        Animated.spring(anim, {
+          toValue: 1,
+          friction: 6,
+          tension: 40,
+          useNativeDriver: true,
+        })
+      )
+    ).start();
+
+    // Button animation
+    Animated.spring(buttonAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 40,
+      delay: 500,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const toggleGoal = (goal: string) => {
     setSelectedGoals(prev =>
@@ -42,172 +110,229 @@ export default function OnboardingScreen() {
     );
   };
 
-  const toggleHabit = (habit: string) => {
-    setSelectedHabits(prev =>
-      prev.includes(habit)
-        ? prev.filter(h => h !== habit)
-        : [...prev, habit]
-    );
-  };
+ const handleFinish = async () => {
+  if (isSubmitting) return;
+  
+  setIsSubmitting(true);
+  try {
+    // Save preferences first
+    await updateSettings({
+      notificationsEnabled: true,
+      dailyReminderTime: '08:00',
+      onboardingCompleted: true, // Also set it here
+    });
+    
+    // Then explicitly complete onboarding
+    await completeOnboarding();
+    
+    console.log('✅ Onboarding completed, navigating to tabs');
+    
+    // Navigate to tabs
+    router.replace('/(tabs)');
+  } catch (error) {
+    console.error('❌ Error completing onboarding:', error);
+    setIsSubmitting(false);
+    Alert.alert('Error', 'Failed to save preferences.');
+  }
+};
 
-  const handleNext = () => {
-    if (step === 1) {
-      if (selectedGoals.length === 0) {
-        Alert.alert('Select Goals', 'Please select at least one goal to continue.');
-        return;
-      }
-      setStep(2);
-    } else if (step === 2) {
-      setStep(3);
-    }
-  };
-
-  const handleFinish = async () => {
-    try {
-      // Save preferences
-      await updateSettings({
-        notificationsEnabled: true,
-        dailyReminderTime: '08:00',
-      });
-      
-      // Mark onboarding as complete
-      await completeOnboarding();
-      
-      // Use setTimeout to ensure state is updated before navigation
-      setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 100);
-    } catch (error) {
-      console.error('Error completing onboarding:', error);
-      Alert.alert('Error', 'Failed to save preferences. Please try again.');
-      setIsSubmitting(false);
-    }
-  };
-
-  const renderStep = () => {
-    switch (step) {
-      case 1:
-        return (
-          <View style={styles.stepContainer}>
-            <Text style={[styles.stepTitle, { color: theme.colors.text }]}>
-              What are your goals?
-            </Text>
-            <Text style={[styles.stepDescription, { color: theme.colors.textSecondary }]}>
-              Select all that apply
-            </Text>
-            <ScrollView style={styles.scrollView}>
-              {GOALS.map(goal => (
-                <SelectionCard
-                  key={goal.title}
-                  title={goal.title}
-                  icon={goal.icon}
-                  color={goal.color}
-                  selected={selectedGoals.includes(goal.title)}
-                  onPress={() => toggleGoal(goal.title)}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        );
-
-      case 2:
-        return (
-          <View style={styles.stepContainer}>
-            <Text style={[styles.stepTitle, { color: theme.colors.text }]}>
-              Choose habits to start with
-            </Text>
-            <Text style={[styles.stepDescription, { color: theme.colors.textSecondary }]}>
-              You can add more later
-            </Text>
-            <ScrollView style={styles.scrollView}>
-              {HABITS.map(habit => (
-                <SelectionCard
-                  key={habit}
-                  title={habit}
-                  selected={selectedHabits.includes(habit)}
-                  onPress={() => toggleHabit(habit)}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        );
-
-      case 3:
-        return (
-          <View style={styles.stepContainer}>
-            <Text style={[styles.stepTitle, { color: theme.colors.text }]}>
-              You're all set! 🎉
-            </Text>
-            <Text style={[styles.stepDescription, { color: theme.colors.textSecondary }]}>
-              Here's what you selected:
-            </Text>
-            
-            <View style={styles.summaryCard}>
-              <Text style={[styles.summaryTitle, { color: theme.colors.text }]}>
-                Goals:
-              </Text>
-              {selectedGoals.map(goal => (
-                <Text key={goal} style={[styles.summaryItem, { color: theme.colors.textSecondary }]}>
-                  • {goal}
-                </Text>
-              ))}
-              
-              {selectedHabits.length > 0 && (
-                <>
-                  <Text style={[styles.summaryTitle, { color: theme.colors.text, marginTop: 16 }]}>
-                    Initial Habits:
-                  </Text>
-                  {selectedHabits.map(habit => (
-                    <Text key={habit} style={[styles.summaryItem, { color: theme.colors.textSecondary }]}>
-                      • {habit}
-                    </Text>
-                  ))}
-                </>
-              )}
-            </View>
-
-            <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
-              Tip: Start small and be consistent. You can always adjust your habits later.
-            </Text>
-          </View>
-        );
-    }
-  };
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.progressContainer}>
-        {[1, 2, 3].map(i => (
-          <View
-            key={i}
-            style={[
-              styles.progressDot,
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Background decoration */}
+      <View style={[styles.bgCircle, { backgroundColor: colors.primary + '08' }]} />
+      
+      <Animated.View
+        style={[
+          styles.content,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        {/* Progress Bar */}
+        <View style={styles.progressSection}>
+          <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
+            <Animated.View
+              style={[
+                styles.progressFill,
+                {
+                  width: progressWidth,
+                  backgroundColor: colors.primary,
+                },
+              ]}
+            />
+          </View>
+          
+          {/* Progress Dots */}
+          <View style={styles.progressDots}>
+            {[1, 2, 3].map(i => (
+              <View
+                key={i}
+                style={[
+                  styles.progressDot,
+                  {
+                    backgroundColor: i <= step ? colors.primary : colors.border,
+                    width: i === step ? 32 : 8,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Title Section */}
+        <Animated.View
+          style={{
+            opacity: titleAnim,
+            transform: [
               {
-                backgroundColor: i <= step ? theme.colors.primary : '#ddd',
-                width: i === step ? 32 : 8,
+                translateY: titleAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+            ],
+          }}
+        >
+          <Text style={[styles.title, { color: colors.text }]}>
+            What are your goals?
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            Select all that apply to personalize your experience
+          </Text>
+        </Animated.View>
+
+        {/* Goals List */}
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {GOALS.map((goal, index) => {
+            const isSelected = selectedGoals.includes(goal.title);
+            const goalAnim = goalAnimations[index];
+            
+            return (
+              <Animated.View
+                key={goal.title}
+                style={{
+                  opacity: goalAnim,
+                  transform: [
+                    {
+                      translateX: goalAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [-50, 0],
+                      }),
+                    },
+                    {
+                      scale: goalAnim,
+                    },
+                  ],
+                }}
+              >
+                <Pressable
+                  onPress={() => toggleGoal(goal.title)}
+                  style={({ pressed }) => [
+                    styles.goalCard,
+                    {
+                      backgroundColor: isSelected ? colors.primary + '15' : colors.card,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                      elevation: isSelected ? 3 : 1,
+                      shadowColor: isSelected ? colors.primary : '#000',
+                      shadowOpacity: isSelected ? 0.2 : 0.05,
+                      shadowRadius: isSelected ? 6 : 2,
+                      shadowOffset: { width: 0, height: 2 },
+                    },
+                  ]}
+                >
+                  <View style={[styles.goalIcon, { backgroundColor: goal.color + '20' }]}>
+                    <Ionicons name={goal.icon as any} size={24} color={goal.color} />
+                  </View>
+                  
+                  <View style={styles.goalContent}>
+                    <Text style={[styles.goalTitle, { color: colors.text }]}>
+                      {goal.title}
+                    </Text>
+                    <Text style={[styles.goalDescription, { color: colors.textSecondary }]}>
+                      {goal.description}
+                    </Text>
+                  </View>
+                  
+                  <View style={[
+                    styles.checkbox,
+                    {
+                      backgroundColor: isSelected ? colors.primary : 'transparent',
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    },
+                  ]}>
+                    {isSelected ? (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    ) : (
+                      <Ionicons name="add" size={16} color={colors.textSecondary} />
+                    )}
+                  </View>
+                </Pressable>
+              </Animated.View>
+            );
+          })}
+        </ScrollView>
+
+        {/* Selected Count */}
+        <View style={styles.selectedCountContainer}>
+          <Ionicons name="ribbon" size={14} color={colors.primary} />
+          <Text style={[styles.selectedCount, { color: colors.primary }]}>
+            {selectedGoals.length} {selectedGoals.length === 1 ? 'goal' : 'goals'} selected
+          </Text>
+        </View>
+
+        {/* Button */}
+        <Animated.View
+          style={{
+            opacity: buttonAnim,
+            transform: [
+              {
+                translateY: buttonAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+              {
+                scale: buttonAnim,
+              },
+            ],
+          }}
+        >
+          <Pressable
+            onPress={handleFinish}
+            disabled={isSubmitting}
+            style={({ pressed }) => [
+              styles.finishButton,
+              { 
+                opacity: pressed || isSubmitting ? 0.8 : 1,
               },
             ]}
-          />
-        ))}
-      </View>
-
-      {renderStep()}
-
-      <View style={styles.buttonContainer}>
-        {step < 3 ? (
-          <PrimaryButton title="Next" onPress={handleNext} style={styles.button} />
-        ) : (
-          <PrimaryButton title="Start Tracking" onPress={handleFinish} style={styles.button} />
-        )}
-        
-        {step > 1 && (
-          <PrimaryButton
-            title="Back"
-            onPress={() => setStep(step - 1)}
-            style={[styles.button, styles.backButton]}
-          />
-        )}
-      </View>
+          >
+            <LinearGradient
+              colors={[colors.primary, colors.secondary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.buttonGradient}
+            >
+              <Text style={styles.finishButtonText}>
+                {isSubmitting ? 'Setting Up...' : selectedGoals.length > 0 ? 'Start Tracking' : 'Skip for Now'}
+              </Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>
+      </Animated.View>
     </View>
   );
 }
@@ -216,61 +341,128 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
+    paddingTop: 60,
+    overflow: 'hidden',
   },
-  progressContainer: {
+  bgCircle: {
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+  },
+  content: {
+    flex: 1,
+    zIndex: 1,
+  },
+  progressSection: {
+    marginBottom: 32,
+  },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  progressDots: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 32,
+    gap: 6,
   },
   progressDot: {
     height: 8,
     borderRadius: 4,
-    marginHorizontal: 4,
   },
-  stepContainer: {
-    flex: 1,
-  },
-  stepTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
     marginBottom: 8,
   },
-  stepDescription: {
-    fontSize: 16,
+  subtitle: {
+    fontSize: 15,
     marginBottom: 24,
+    lineHeight: 22,
   },
   scrollView: {
     flex: 1,
   },
-  summaryCard: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
+  scrollContent: {
+    paddingBottom: 8,
+  },
+  goalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 16,
-    marginBottom: 24,
+    borderRadius: 16,
+    borderWidth: 2,
+    marginBottom: 12,
+    gap: 12,
   },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
+  goalIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  summaryItem: {
+  goalContent: {
+    flex: 1,
+  },
+  goalTitle: {
     fontSize: 16,
-    marginBottom: 4,
+    fontWeight: '600',
+    marginBottom: 2,
   },
-  tipText: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    textAlign: 'center',
+  goalDescription: {
+    fontSize: 12,
   },
-  buttonContainer: {
-    marginTop: 16,
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  button: {
-    width: '100%',
-    marginBottom: 8,
+  selectedCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 12,
+    gap: 6,
   },
-  backButton: {
-    backgroundColor: '#666',
+  selectedCount: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  finishButton: {
+    borderRadius: 25,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  buttonGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  finishButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

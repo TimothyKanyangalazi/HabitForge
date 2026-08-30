@@ -1,11 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Alert, Modal, ScrollView } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  FlatList, 
+  Pressable, 
+  RefreshControl, 
+  Alert, 
+  Modal, 
+  ScrollView,
+  Animated,
+  Easing,
+} from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRoutineStore } from '../../src/stores/routineStore';
 import { RoutineCard } from '../../src/components/RoutineCard/RoutineCard';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { Routine } from '../../src/types';
+import { lightTheme } from '../../src/theme';
 import { 
   routineTemplates, 
   RoutineTemplate,
@@ -14,16 +28,68 @@ import {
 } from '../../src/templates/routineTemplates';
 
 export default function RoutinesScreen() {
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
+  
   const { routines, fetchRoutines, deleteRoutine, archiveRoutine, createRoutine, addTask, isLoading } = useRoutineStore();
   const [refreshing, setRefreshing] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const templateAnimations = useRef(routineTemplates.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
     loadData();
+    animateIn();
   }, []);
+
+  const animateIn = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.spring(headerAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 40,
+      delay: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  useEffect(() => {
+    if (showTemplates) {
+      Animated.stagger(50,
+        templateAnimations.map(anim =>
+          Animated.spring(anim, {
+            toValue: 1,
+            friction: 6,
+            tension: 40,
+            useNativeDriver: true,
+          })
+        )
+      ).start();
+    } else {
+      templateAnimations.forEach(anim => anim.setValue(0));
+    }
+  }, [showTemplates]);
 
   const loadData = async () => {
     await fetchRoutines();
@@ -47,7 +113,6 @@ export default function RoutinesScreen() {
             try {
               setIsSubmitting(true);
               
-              // Create routine
               const routineId = await createRoutine({
                 name: template.name,
                 description: template.description,
@@ -57,7 +122,6 @@ export default function RoutinesScreen() {
                 days: JSON.stringify(template.days),
               });
               
-              // Add tasks
               for (const task of template.tasks) {
                 await addTask({
                   routine_id: routineId,
@@ -73,14 +137,8 @@ export default function RoutinesScreen() {
                 'Success',
                 `"${template.name}" has been created!`,
                 [
-                  { 
-                    text: 'View Routine', 
-                    onPress: () => router.push(`/routine/${routineId}`)
-                  },
-                  { 
-                    text: 'Stay Here', 
-                    style: 'cancel' 
-                  },
+                  { text: 'View Routine', onPress: () => router.push(`/routine/${routineId}`) },
+                  { text: 'Stay Here', style: 'cancel' },
                 ]
               );
             } catch (error) {
@@ -94,12 +152,26 @@ export default function RoutinesScreen() {
     );
   };
 
-  const renderRoutine = ({ item }: { item: Routine }) => (
-    <RoutineCard
-      routine={item}
-      onPress={() => router.push(`/routine/${item.id}`)}
-      onLongPress={() => showRoutineOptions(item)}
-    />
+  const renderRoutine = ({ item, index }: { item: Routine; index: number }) => (
+    <Animated.View
+      style={{
+        opacity: fadeAnim,
+        transform: [
+          {
+            translateY: slideAnim.interpolate({
+              inputRange: [0, 20],
+              outputRange: [20, 0],
+            }),
+          },
+        ],
+      }}
+    >
+      <RoutineCard
+        routine={item}
+        onPress={() => router.push(`/routine/${item.id}`)}
+        onLongPress={() => showRoutineOptions(item)}
+      />
+    </Animated.View>
   );
 
   const showRoutineOptions = (routine: Routine) => {
@@ -107,10 +179,7 @@ export default function RoutinesScreen() {
       `Routine: ${routine.name}`,
       'Choose an action',
       [
-        { 
-          text: 'Edit', 
-          onPress: () => router.push(`/routine/edit?id=${routine.id}`) 
-        },
+        { text: 'Edit', onPress: () => router.push(`/routine/edit?id=${routine.id}`) },
         { 
           text: 'Archive', 
           onPress: () => {
@@ -162,7 +231,6 @@ export default function RoutinesScreen() {
     );
   };
 
-  // Get unique categories from templates
   const categories = ['All', ...new Set(routineTemplates.map(t => {
     const name = t.name.toLowerCase();
     if (name.includes('morning')) return 'Morning';
@@ -174,7 +242,6 @@ export default function RoutinesScreen() {
     return 'General';
   }))];
 
-  // Filter templates by category
   const filteredTemplates = selectedCategory === 'All'
     ? routineTemplates
     : routineTemplates.filter(t => {
@@ -188,102 +255,156 @@ export default function RoutinesScreen() {
         return false;
       });
 
-  const renderTemplateItem = ({ item }: { item: RoutineTemplate }) => {
+  const renderTemplateItem = ({ item, index }: { item: RoutineTemplate; index: number }) => {
     const totalDuration = getTemplateDuration(item);
     const taskCount = getTemplateTaskCount(item);
+    const anim = templateAnimations[index] || new Animated.Value(1);
     
     return (
-      <Pressable
-        onPress={() => handleUseTemplate(item)}
-        style={[styles.templateCard, { 
-          backgroundColor: theme.colors.card,
-          borderLeftColor: item.color,
-        }]}
+      <Animated.View
+        style={{
+          opacity: anim,
+          transform: [
+            {
+              translateY: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [30, 0],
+              }),
+            },
+          ],
+        }}
       >
-        <View style={styles.templateHeader}>
-          <View style={[styles.templateIcon, { backgroundColor: item.color }]}>
-            <Ionicons name={item.icon as any} size={24} color="#fff" />
-          </View>
-          <View style={styles.templateInfo}>
-            <Text style={[styles.templateName, { color: theme.colors.text }]}>
-              {item.name}
-            </Text>
-            <Text style={[styles.templateDescription, { color: theme.colors.textSecondary }]}>
-              {item.description}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => handleUseTemplate(item)}
-            style={[styles.addTemplateButton, { backgroundColor: item.color }]}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-          </Pressable>
-        </View>
-
-        <View style={styles.templateStats}>
-          <View style={styles.statItem}>
-            <Ionicons name="time-outline" size={14} color={theme.colors.textSecondary} />
-            <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
-              {item.start_time}
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons name="list-outline" size={14} color={theme.colors.textSecondary} />
-            <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
-              {taskCount} tasks
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons name="hourglass-outline" size={14} color={theme.colors.textSecondary} />
-            <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
-              {totalDuration} min
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.taskPreview}>
-          {item.tasks.slice(0, 3).map((task, index) => (
-            <View key={index} style={styles.taskPreviewItem}>
-              <Text style={[styles.taskPreviewText, { color: theme.colors.textSecondary }]}>
-                {index + 1}. {task.task_name}
+        <Pressable
+          onPress={() => handleUseTemplate(item)}
+          style={({ pressed }) => [
+            styles.templateCard,
+            { 
+              backgroundColor: colors.card,
+              borderLeftColor: item.color,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            },
+          ]}
+        >
+          <View style={styles.templateHeader}>
+            <View style={[styles.templateIcon, { backgroundColor: item.color + '20' }]}>
+              <Ionicons name={item.icon as any} size={24} color={item.color} />
+            </View>
+            <View style={styles.templateInfo}>
+              <Text style={[styles.templateName, { color: colors.text }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={[styles.templateDescription, { color: colors.textSecondary }]} numberOfLines={2}>
+                {item.description}
               </Text>
             </View>
-          ))}
-          {item.tasks.length > 3 && (
-            <Text style={[styles.moreTasks, { color: theme.colors.primary }]}>
-              +{item.tasks.length - 3} more tasks
-            </Text>
-          )}
-        </View>
-      </Pressable>
+            <Pressable
+              onPress={() => handleUseTemplate(item)}
+              style={({ pressed }) => [
+                styles.addTemplateButton,
+                { 
+                  backgroundColor: item.color,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </Pressable>
+          </View>
+
+          <View style={styles.templateStats}>
+            <View style={styles.statItem}>
+              <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+              <Text style={[styles.statText, { color: colors.textSecondary }]}>
+                {item.start_time}
+              </Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="list-outline" size={14} color={colors.textSecondary} />
+              <Text style={[styles.statText, { color: colors.textSecondary }]}>
+                {taskCount} tasks
+              </Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="hourglass-outline" size={14} color={colors.textSecondary} />
+              <Text style={[styles.statText, { color: colors.textSecondary }]}>
+                {totalDuration} min
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.taskPreview}>
+            {item.tasks.slice(0, 3).map((task, taskIndex) => (
+              <View key={taskIndex} style={styles.taskPreviewItem}>
+                <Ionicons name="checkmark" size={12} color={item.color} />
+                <Text style={[styles.taskPreviewText, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {task.task_name}
+                </Text>
+              </View>
+            ))}
+            {item.tasks.length > 3 && (
+              <Text style={[styles.moreTasks, { color: item.color }]}>
+                +{item.tasks.length - 3} more tasks
+              </Text>
+            )}
+          </View>
+        </Pressable>
+      </Animated.View>
     );
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={[styles.title, { color: theme.colors.text }]}>My Routines</Text>
-          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: headerAnim,
+            transform: [
+              { 
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }) 
+              },
+            ],
+          },
+        ]}
+      >
+        <View style={styles.headerTextContainer}>
+          <Text style={[styles.title, { color: colors.text }]}>My Routines</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             {routines.length} {routines.length === 1 ? 'routine' : 'routines'}
           </Text>
         </View>
         <View style={styles.headerActions}>
           <Pressable
             onPress={() => setShowTemplates(true)}
-            style={[styles.templateButton, { backgroundColor: theme.colors.card }]}
+            style={({ pressed }) => [
+              styles.templateButton,
+              { 
+                backgroundColor: colors.card,
+                transform: [{ scale: pressed ? 0.9 : 1 }],
+              },
+            ]}
           >
-            <Ionicons name="albums-outline" size={20} color={theme.colors.primary} />
+            <Ionicons name="albums-outline" size={20} color={colors.primary} />
           </Pressable>
           <Pressable
             onPress={() => router.push('/routine/create')}
-            style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
+            style={({ pressed }) => [
+              { transform: [{ scale: pressed ? 0.9 : 1 }] },
+            ]}
           >
-            <Ionicons name="add" size={24} color="#fff" />
+            <LinearGradient
+              colors={[colors.primary, colors.secondary]}
+              style={styles.addButton}
+            >
+              <Ionicons name="add" size={24} color="#fff" />
+            </LinearGradient>
           </Pressable>
         </View>
-      </View>
+      </Animated.View>
 
       {/* Routine List */}
       <FlatList
@@ -298,39 +419,50 @@ export default function RoutinesScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.card }]}>
-              <Ionicons name="list-outline" size={48} color={theme.colors.textSecondary} />
+            <View style={[styles.emptyIconContainer, { backgroundColor: colors.card }]}>
+              <Ionicons name="list-outline" size={48} color={colors.textSecondary} />
             </View>
-            <Text style={[styles.emptyText, { color: theme.colors.text }]}>
+            <Text style={[styles.emptyText, { color: colors.text }]}>
               No Routines Yet
             </Text>
-            <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
               Create your own routine or start with a template
             </Text>
             <View style={styles.emptyActions}>
               <Pressable
                 onPress={() => router.push('/routine/create')}
-                style={[styles.emptyButton, { backgroundColor: theme.colors.primary }]}
+                style={({ pressed }) => [
+                  { transform: [{ scale: pressed ? 0.95 : 1 }] },
+                ]}
               >
-                <Ionicons name="add" size={20} color="#fff" />
-                <Text style={styles.emptyButtonText}>Create Routine</Text>
+                <LinearGradient
+                  colors={[colors.primary, colors.secondary]}
+                  style={styles.emptyButton}
+                >
+                  <Ionicons name="add" size={20} color="#fff" />
+                  <Text style={styles.emptyButtonText}>Create Routine</Text>
+                </LinearGradient>
               </Pressable>
               <Pressable
                 onPress={() => setShowTemplates(true)}
-                style={[styles.emptyButton, { 
-                  backgroundColor: theme.colors.background,
-                  borderWidth: 1,
-                  borderColor: theme.colors.primary,
-                }]}
+                style={({ pressed }) => [
+                  styles.emptyButton,
+                  { 
+                    backgroundColor: colors.background,
+                    borderWidth: 1,
+                    borderColor: colors.primary,
+                    transform: [{ scale: pressed ? 0.95 : 1 }],
+                  },
+                ]}
               >
-                <Ionicons name="albums-outline" size={20} color={theme.colors.primary} />
-                <Text style={[styles.emptyButtonText, { color: theme.colors.primary }]}>
+                <Ionicons name="albums-outline" size={20} color={colors.primary} />
+                <Text style={[styles.emptyButtonText, { color: colors.primary }]}>
                   Browse Templates
                 </Text>
               </Pressable>
@@ -340,7 +472,7 @@ export default function RoutinesScreen() {
         ListHeaderComponent={
           routines.length > 0 ? (
             <View style={styles.listHeader}>
-              <Text style={[styles.listHeaderText, { color: theme.colors.textSecondary }]}>
+              <Text style={[styles.listHeaderText, { color: colors.textSecondary }]}>
                 Your Routines
               </Text>
             </View>
@@ -354,60 +486,62 @@ export default function RoutinesScreen() {
         animationType="slide"
         onRequestClose={() => setShowTemplates(false)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={styles.modalHeader}>
-            <View>
-              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+            <View style={styles.modalHeaderText}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
                 Routine Templates
               </Text>
-              <Text style={[styles.modalSubtitle, { color: theme.colors.textSecondary }]}>
-                Choose a pre-built routine
+              <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                Choose a pre-built routine to get started
               </Text>
             </View>
             <Pressable
               onPress={() => setShowTemplates(false)}
-              style={styles.closeButton}
+              style={({ pressed }) => [
+                styles.closeButton,
+                { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 },
+              ]}
             >
-              <Ionicons name="close" size={24} color={theme.colors.text} />
+              <Ionicons name="close" size={24} color={colors.text} />
             </Pressable>
           </View>
 
-          {/* Category Filter */}
-          <View style={styles.categoryContainer}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryList}
-            >
-              {categories.map(category => (
-                <Pressable
-                  key={category}
-                  onPress={() => setSelectedCategory(category)}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryContainer}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+          >
+            {categories.map(category => (
+              <Pressable
+                key={category}
+                onPress={() => setSelectedCategory(category)}
+                style={[
+                  styles.categoryButton,
+                  {
+                    backgroundColor: selectedCategory === category
+                      ? colors.primary
+                      : colors.card,
+                  },
+                ]}
+              >
+                <Text
                   style={[
-                    styles.categoryButton,
+                    styles.categoryText,
                     {
-                      backgroundColor: selectedCategory === category
-                        ? theme.colors.primary
-                        : theme.colors.card,
+                      color: selectedCategory === category ? '#fff' : colors.text,
+                      fontWeight: '600',
+                      fontSize: 13,
                     },
                   ]}
+                  numberOfLines={1}
                 >
-                  <Text
-                    style={[
-                      styles.categoryText,
-                      {
-                        color: selectedCategory === category
-                          ? '#fff'
-                          : theme.colors.text,
-                      },
-                    ]}
-                  >
-                    {category}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
+                  {category}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
 
           <FlatList
             data={filteredTemplates}
@@ -417,8 +551,8 @@ export default function RoutinesScreen() {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Ionicons name="albums-outline" size={48} color={theme.colors.textSecondary} />
-                <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+                <Ionicons name="albums-outline" size={48} color={colors.textSecondary} />
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                   No templates in this category
                 </Text>
               </View>
@@ -431,64 +565,47 @@ export default function RoutinesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 16,
+    paddingBottom: 20,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+  headerTextContainer: { flex: 1, paddingRight: 12 },
+  title: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, marginTop: 4 },
+  headerActions: { flexDirection: 'row', gap: 8 },
   templateButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
     elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
   },
-  listHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-  },
+  listHeader: { paddingHorizontal: 20, paddingBottom: 8 },
   listHeaderText: {
     fontSize: 14,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  listContent: {
-    paddingBottom: 100,
-  },
-  emptyListContent: {
-    flexGrow: 1,
-  },
+  listContent: { paddingBottom: 100 },
+  emptyListContent: { flexGrow: 1 },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
@@ -504,21 +621,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  emptyActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
+  emptyText: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
+  emptySubtext: { fontSize: 14, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+  emptyActions: { flexDirection: 'row', gap: 12, flexWrap: 'wrap', justifyContent: 'center' },
   emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -527,15 +632,8 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     gap: 8,
   },
-  emptyButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  modalContainer: {
-    flex: 1,
-    paddingTop: 60,
-  },
+  emptyButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  modalContainer: { flex: 1, paddingTop: 60 },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -543,44 +641,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
-  },
+  modalHeaderText: { flex: 1, paddingRight: 12 },
+  modalTitle: { fontSize: 28, fontWeight: '800' },
+  modalSubtitle: { fontSize: 14, marginTop: 4 },
   closeButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  categoryContainer: {
-    marginBottom: 16,
-  },
-  categoryList: {
-    paddingHorizontal: 20,
-    gap: 8,
-  },
+  categoryContainer: { flexGrow: 0, marginBottom: 16 },
   categoryButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    marginRight: 8,
   },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  templateList: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    gap: 16,
-  },
+  categoryText: { fontSize: 14, fontWeight: '500' },
+  templateList: { paddingHorizontal: 20, paddingBottom: 40 },
   templateCard: {
     borderRadius: 16,
     padding: 16,
     borderLeftWidth: 4,
-    marginBottom: 8,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   templateHeader: {
     flexDirection: 'row',
@@ -595,17 +683,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  templateInfo: {
-    flex: 1,
-  },
-  templateName: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  templateDescription: {
-    fontSize: 13,
-  },
+  templateInfo: { flex: 1, minWidth: 0 },
+  templateName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  templateDescription: { fontSize: 13, lineHeight: 18 },
   addTemplateButton: {
     width: 36,
     height: 36,
@@ -620,26 +700,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexWrap: 'wrap',
   },
-  statItem: {
+  statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statText: { fontSize: 12 },
+  taskPreview: { marginBottom: 4 },
+  taskPreviewItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  statText: {
-    fontSize: 12,
-  },
-  taskPreview: {
+    gap: 6,
     marginBottom: 4,
   },
-  taskPreviewItem: {
-    marginBottom: 4,
-  },
-  taskPreviewText: {
-    fontSize: 13,
-  },
-  moreTasks: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 4,
-  },
+  taskPreviewText: { fontSize: 13, flex: 1 },
+  moreTasks: { fontSize: 13, fontWeight: '600', marginTop: 4 },
 });

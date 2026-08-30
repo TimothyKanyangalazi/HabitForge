@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
+import { router, useRouter } from 'expo-router';
 import { HabitForm } from '../../src/components/HabitCard/HabitForm';
 import { useHabitStore } from '../../src/stores/habitStore';
 import { useTheme } from '../../src/theme/ThemeContext';
+import { lightTheme } from '../../src/theme';
 
 export default function CreateHabitScreen() {
-  const theme = useTheme();
+  const router = useRouter();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
   const { createHabit } = useHabitStore();
 
   const handleSubmit = async (values: any) => {
@@ -19,11 +22,19 @@ export default function CreateHabitScreen() {
     }
   };
 
+  const handleCancel = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/habits');
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <HabitForm
         onSubmit={handleSubmit}
-        onCancel={() => router.back()}
+        onCancel={handleCancel}
       />
     </View>
   );

@@ -6,6 +6,7 @@ import { PrimaryButton } from '../common/PrimaryButton';
 import { PredefinedExcuses } from './PredefinedExcuses';
 import { useExcuseStore } from '../../stores/excuseStore';
 import { Excuse } from '../../types';
+import { lightTheme } from '../../theme';
 
 interface ExcuseFormProps {
   habitId?: number;
@@ -24,7 +25,9 @@ export const ExcuseForm: React.FC<ExcuseFormProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const theme = useTheme();
+   const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   const { predefinedExcuses, fetchPredefined } = useExcuseStore();
   const [text, setText] = useState('');
   const [realityCheck, setRealityCheck] = useState('');

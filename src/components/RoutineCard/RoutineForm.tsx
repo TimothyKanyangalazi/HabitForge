@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { PrimaryButton } from '../common/PrimaryButton';
 import { Routine, RoutineTask } from '../../types';
+import { lightTheme } from '../../theme';
 
 interface RoutineFormProps {
   initialValues?: Partial<Routine & { tasks: RoutineTask[] }>;
@@ -34,7 +35,9 @@ export const RoutineForm: React.FC<RoutineFormProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const theme = useTheme();
+ const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   const [name, setName] = useState(initialValues?.name || '');
   const [description, setDescription] = useState(initialValues?.description || '');
   const [startTime, setStartTime] = useState(initialValues?.start_time || '');

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { lightTheme } from '../../theme';
 
 interface HeatmapData {
   date: string;
@@ -16,7 +17,9 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
   data,
   days = 30,
 }) => {
-  const theme = useTheme();
+   const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
 
   const getColor = (rate: number) => {
     if (rate === 0) return theme.colors.card;

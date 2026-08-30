@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
-
+import { lightTheme } from '../../theme';
 interface BarChartProps {
   data: Array<{
     label: string;
@@ -17,7 +17,9 @@ export const BarChart: React.FC<BarChartProps> = ({
   maxValue,
   height = 150,
 }) => {
-  const theme = useTheme();
+    const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   const chartWidth = Dimensions.get('window').width - 80;
   const max = maxValue || Math.max(...data.map(d => d.value), 1);
 

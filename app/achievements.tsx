@@ -15,9 +15,12 @@ import { useTheme } from '../src/theme/ThemeContext';
 import { useAchievementStore } from '../src/stores/achievementStore';
 import { AchievementCard } from '../src/components/AchievementCard';
 import { Achievement } from '../src/types';
+import { lightTheme } from '../src/theme';
 
 export default function AchievementsScreen() {
-  const theme = useTheme();
+   const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   const { 
     achievements, 
     userAchievements, 

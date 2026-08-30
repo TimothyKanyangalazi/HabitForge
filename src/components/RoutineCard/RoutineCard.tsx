@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { Routine } from '../../types';
+import { lightTheme } from '../../theme';
 
 interface RoutineCardProps {
   routine: Routine;
@@ -15,7 +16,9 @@ export const RoutineCard: React.FC<RoutineCardProps> = ({
   onPress,
   onLongPress,
 }) => {
-  const theme = useTheme();
+   const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
 
   return (
     <Pressable

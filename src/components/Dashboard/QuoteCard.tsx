@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/ThemeContext';
+import { lightTheme } from '../../theme';
 
 interface QuoteCardProps {
   quote: string;
@@ -13,7 +14,9 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({
   quote,
   author,
 }) => {
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
 
   if (!quote) {
     return null;
@@ -22,13 +25,13 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({
   return (
     <View style={styles.wrapper}>
       <LinearGradient
-        colors={['#667eea', '#764ba2']}
+        colors={[colors.primary, colors.secondary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.card}
       >
         <View style={styles.quoteIconContainer}>
-          <Ionicons name="quote" size={30} color="rgba(255,255,255,0.5)" />
+          <Ionicons name="chatbubble-ellipses" size={30} color="rgba(255,255,255,0.5)" />
         </View>
         
         <Text style={styles.quoteText}>

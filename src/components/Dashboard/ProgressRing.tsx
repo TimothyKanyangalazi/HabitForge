@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useTheme } from '../../theme/ThemeContext';
+import { lightTheme } from '../../theme';
 
 interface ProgressRingProps {
   progress: number; // 0 to 100
@@ -18,8 +19,12 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   color,
   children,
 }) => {
-  const theme = useTheme();
-  const ringColor = color || theme.colors.primary;
+  // Safe theme access
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
+  
+  const ringColor = color || colors.primary;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
@@ -29,7 +34,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
       <Svg width={size} height={size}>
         {/* Background circle */}
         <Circle
-          stroke={theme.colors.border}
+          stroke={colors.border}
           fill="none"
           cx={size / 2}
           cy={size / 2}

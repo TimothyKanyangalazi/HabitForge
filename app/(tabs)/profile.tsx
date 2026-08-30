@@ -9,6 +9,8 @@ import {
   Dimensions,
   Alert,
   Switch,
+  Easing,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,16 +20,16 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useHabitStore } from '../../src/stores/habitStore';
 import { useRoutineStore } from '../../src/stores/routineStore';
 import { statisticsService } from '../../src/services/statisticsService';
+import { lightTheme } from '../../src/theme';
 
 const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
-  const theme = useTheme();
-  const { 
-    settings = {},
-    loadSettings, 
-    updateSettings 
-  } = useSettingsStore();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
+  
+  const { settings = {}, loadSettings, updateSettings } = useSettingsStore();
   const { habits = [] } = useHabitStore();
   const { routines = [] } = useRoutineStore();
   
@@ -45,6 +47,7 @@ export default function ProfileScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const headerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadProfileData();
@@ -56,11 +59,13 @@ export default function ProfileScreen() {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 600,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 600,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
@@ -70,6 +75,14 @@ export default function ProfileScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    Animated.spring(headerAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 40,
+      delay: 200,
+      useNativeDriver: true,
+    }).start();
   };
 
   const loadProfileData = async () => {
@@ -98,47 +111,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleResetData = () => {
-    Alert.alert(
-      'Reset All Data',
-      'This will delete all your habits, routines, and progress. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              Alert.alert('Success', 'All data has been reset.');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to reset data.');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleExportData = () => {
-    Alert.alert(
-      'Export Data',
-      'Your data will be exported as a JSON file.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Export',
-          onPress: async () => {
-            try {
-              Alert.alert('Success', 'Data exported successfully!');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to export data.');
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const handleToggle = async (key: string, value: boolean) => {
     try {
       if (key === 'theme') {
@@ -160,28 +132,28 @@ export default function ProfileScreen() {
           title: 'My Habits',
           subtitle: `${habits.length || 0} active habits`,
           route: '/habits',
-          color: theme.colors.primary,
+          color: colors.primary,
         },
         {
           icon: 'list-outline',
           title: 'My Routines',
           subtitle: `${routines.length || 0} active routines`,
           route: '/routines',
-          color: theme.colors.success,
+          color: colors.success,
         },
         {
           icon: 'alert-circle-outline',
           title: 'Excuse Log',
           subtitle: 'View your excuse history',
           route: '/excuses',
-          color: theme.colors.danger,
+          color: colors.danger,
         },
         {
           icon: 'stats-chart-outline',
           title: 'Statistics',
           subtitle: 'Detailed analytics',
           route: '/statistics',
-          color: theme.colors.warning,
+          color: colors.warning,
         },
       ],
     },
@@ -211,9 +183,8 @@ export default function ProfileScreen() {
           icon: 'notifications-outline',
           title: 'Notifications',
           subtitle: 'Manage reminders',
-          color: theme.colors.primary,
-          isToggle: true,
-          toggleKey: 'notifications_enabled',
+          route: '/notifications-settings',
+          color: colors.primary,
         },
         {
           icon: 'moon-outline',
@@ -229,18 +200,11 @@ export default function ProfileScreen() {
       title: 'Data',
       items: [
         {
-          icon: 'download-outline',
-          title: 'Export Data',
-          subtitle: 'Backup your progress',
-          color: theme.colors.success,
-          onPress: handleExportData,
-        },
-        {
-          icon: 'trash-outline',
-          title: 'Reset Data',
-          subtitle: 'Clear all data',
-          color: theme.colors.danger,
-          onPress: handleResetData,
+          icon: 'server-outline',
+          title: 'Data Management',
+          subtitle: 'Export, import, or reset data',
+          route: '/data-management',
+          color: colors.primary,
         },
       ],
     },
@@ -248,7 +212,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView 
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       showsVerticalScrollIndicator={false}
     >
       <Animated.View
@@ -257,66 +221,86 @@ export default function ProfileScreen() {
           transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
         }}
       >
-        <LinearGradient
-          colors={['#667eea', '#764ba2']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.profileHeader}
+        {/* Profile Header */}
+        <Animated.View
+          style={{
+            opacity: headerAnim,
+            transform: [
+              { 
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }) 
+              },
+            ],
+          }}
         >
-          <View style={styles.profileHeaderContent}>
-            <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <Ionicons name="person" size={40} color="#fff" />
-              </View>
-              <View style={styles.levelBadge}>
-                <Text style={styles.levelText}>Lv {userLevel}</Text>
-              </View>
-            </View>
-            
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>HabitForge</Text>
-              <Text style={styles.profileSubtitle}>Building better habits daily</Text>
-              
-              <View style={styles.xpContainer}>
-                <View style={styles.xpBar}>
-                  <View style={[styles.xpFill, { width: `${userXp}%` }]} />
+          <LinearGradient
+            colors={[colors.primary, colors.secondary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.profileHeader}
+          >
+            <View style={styles.profileHeaderContent}>
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatar}>
+                  <Image 
+                    source={require('../../assets/HF3.png')} 
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
                 </View>
-                <Text style={styles.xpText}>{userXp}/100 XP</Text>
+                <View style={styles.levelBadge}>
+                  <Text style={styles.levelText}>Lv {userLevel}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>HabitForge</Text>
+                <Text style={styles.profileSubtitle}>Building better habits daily</Text>
+                
+                <View style={styles.xpContainer}>
+                  <View style={styles.xpBar}>
+                    <View style={[styles.xpFill, { width: `${userXp}%` }]} />
+                  </View>
+                  <Text style={styles.xpText}>{userXp}/100 XP</Text>
+                </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{totalHabitsCompleted}</Text>
-              <Text style={styles.statLabel}>Completed</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{totalHabitsCompleted}</Text>
+                <Text style={styles.statLabel}>Completed</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{currentStreak}</Text>
+                <Text style={styles.statLabel}>Streak</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{longestStreak}</Text>
+                <Text style={styles.statLabel}>Best</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{completionRate.toFixed(0)}%</Text>
+                <Text style={styles.statLabel}>Success</Text>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{currentStreak}</Text>
-              <Text style={styles.statLabel}>Current Streak</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{longestStreak}</Text>
-              <Text style={styles.statLabel}>Best Streak</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{completionRate.toFixed(0)}%</Text>
-              <Text style={styles.statLabel}>Success Rate</Text>
-            </View>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
+        </Animated.View>
 
+        {/* Menu Sections */}
         <View style={styles.menuContainer}>
           {menuSections.map((section, sectionIndex) => (
             <View key={sectionIndex} style={styles.menuSection}>
-              <Text style={[styles.menuSectionTitle, { color: theme.colors.textSecondary }]}>
+              <Text style={[styles.menuSectionTitle, { color: colors.textSecondary }]}>
                 {section.title.toUpperCase()}
               </Text>
               
-              <View style={[styles.menuCard, { backgroundColor: theme.colors.card }]}>
+              <View style={[styles.menuCard, { backgroundColor: colors.card }]}>
                 {section.items.map((item, itemIndex) => (
                   <Pressable
                     key={itemIndex}
@@ -324,7 +308,10 @@ export default function ProfileScreen() {
                     style={({ pressed }) => [
                       styles.menuItem,
                       itemIndex < section.items.length - 1 && styles.menuItemBorder,
-                      { opacity: pressed ? 0.7 : 1 },
+                      { 
+                        opacity: pressed ? 0.7 : 1,
+                        borderBottomColor: colors.border,
+                      },
                     ]}
                   >
                     <View style={[styles.menuIconContainer, { backgroundColor: item.color + '15' }]}>
@@ -332,10 +319,10 @@ export default function ProfileScreen() {
                     </View>
                     
                     <View style={styles.menuItemContent}>
-                      <Text style={[styles.menuItemTitle, { color: theme.colors.text }]}>
+                      <Text style={[styles.menuItemTitle, { color: colors.text }]}>
                         {item.title}
                       </Text>
-                      <Text style={[styles.menuItemSubtitle, { color: theme.colors.textSecondary }]}>
+                      <Text style={[styles.menuItemSubtitle, { color: colors.textSecondary }]}>
                         {item.subtitle}
                       </Text>
                     </View>
@@ -349,7 +336,7 @@ export default function ProfileScreen() {
                         }
                         onValueChange={(value) => handleToggle(item.toggleKey!, value)}
                         trackColor={{ 
-                          false: theme.colors.border, 
+                          false: colors.border, 
                           true: item.color + '80',
                         }}
                         thumbColor={
@@ -359,7 +346,7 @@ export default function ProfileScreen() {
                         }
                       />
                     ) : (
-                      <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+                      <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                     )}
                   </Pressable>
                 ))}
@@ -369,7 +356,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.versionContainer}>
-          <Text style={[styles.versionText, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.versionText, { color: colors.textSecondary }]}>
             HabitForge v1.0.0
           </Text>
         </View>
@@ -381,9 +368,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   profileHeader: {
     margin: 20,
     borderRadius: 24,
@@ -410,6 +395,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  avatarImage: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
   },
   levelBadge: {
     position: 'absolute',
@@ -425,9 +418,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  profileInfo: {
-    flex: 1,
-  },
+  profileInfo: { flex: 1 },
   profileName: {
     fontSize: 22,
     fontWeight: 'bold',
@@ -469,10 +460,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.2)',
   },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
+  statItem: { flex: 1, alignItems: 'center' },
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -480,7 +468,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: 'rgba(255, 255, 255, 0.7)',
   },
   statDivider: {
@@ -488,12 +476,8 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
-  menuContainer: {
-    paddingHorizontal: 20,
-  },
-  menuSection: {
-    marginBottom: 20,
-  },
+  menuContainer: { paddingHorizontal: 20 },
+  menuSection: { marginBottom: 20 },
   menuSectionTitle: {
     fontSize: 12,
     fontWeight: '700',
@@ -518,7 +502,6 @@ const styles = StyleSheet.create({
   },
   menuItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   menuIconContainer: {
     width: 40,
@@ -527,22 +510,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuItemContent: {
-    flex: 1,
-  },
+  menuItemContent: { flex: 1 },
   menuItemTitle: {
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 2,
   },
-  menuItemSubtitle: {
-    fontSize: 12,
-  },
+  menuItemSubtitle: { fontSize: 12 },
   versionContainer: {
     alignItems: 'center',
     paddingVertical: 20,
   },
-  versionText: {
-    fontSize: 12,
-  },
+  versionText: { fontSize: 12 },
 });

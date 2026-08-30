@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { getDatabase } from '../../src/database/database';
 import { 
   View, 
   Text, 
@@ -10,10 +9,13 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../src/theme/ThemeContext';
+import { lightTheme } from '../../src/theme';
 import { useHabitStore } from '../../src/stores/habitStore';
 import { useRoutineStore } from '../../src/stores/routineStore';
 import { statisticsService } from '../../src/services/statisticsService';
@@ -21,10 +23,13 @@ import { ProgressRing } from '../../src/components/Dashboard/ProgressRing';
 import { StreakCard } from '../../src/components/Dashboard/StreakCard';
 import { QuoteCard } from '../../src/components/Dashboard/QuoteCard';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
+  
   const { habits, todayLogs, fetchHabits, fetchTodayLogs, logHabit } = useHabitStore();
   const { routines, fetchRoutines } = useRoutineStore();
   const [refreshing, setRefreshing] = useState(false);
@@ -35,32 +40,19 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingQuote, setIsRefreshingQuote] = useState(false);
   
-  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const quoteSpinAnim = useRef(new Animated.Value(0)).current;
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const quickActionsAnim = useRef([0, 1, 2, 3].map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
     loadData();
     animateIn();
     startPulseAnimation();
-    checkQuotes();
   }, []);
-
-  const checkQuotes = async () => {
-    try {
-      const db = getDatabase();
-      const quotes = await db.getAllAsync('SELECT * FROM quotes');
-      console.log('📚 All quotes in database:', quotes.length);
-      if (quotes.length > 0) {
-        console.log('📚 First quote:', quotes[0]);
-      }
-    } catch (error) {
-      console.error('❌ Error checking quotes:', error);
-    }
-  };
 
   const animateIn = () => {
     Animated.parallel([
@@ -83,6 +75,25 @@ export default function HomeScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    Animated.spring(headerAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 40,
+      delay: 200,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.stagger(100,
+      quickActionsAnim.map(anim =>
+        Animated.spring(anim, {
+          toValue: 1,
+          friction: 6,
+          tension: 40,
+          useNativeDriver: true,
+        })
+      )
+    ).start();
   };
 
   const startPulseAnimation = () => {
@@ -114,15 +125,9 @@ export default function HomeScreen() {
 
   const loadQuote = async () => {
     try {
-      console.log('📖 Loading quote...');
       const quoteData = await statisticsService.getQuoteOfDay();
-      console.log('📖 Quote loaded:', quoteData);
-      
       if (quoteData && quoteData.text) {
-        setQuote({
-          text: quoteData.text,
-          author: quoteData.author || 'Unknown',
-        });
+        setQuote({ text: quoteData.text, author: quoteData.author || 'Unknown' });
       } else {
         setQuote({ 
           text: 'Discipline is the bridge between goals and accomplishment.', 
@@ -130,7 +135,7 @@ export default function HomeScreen() {
         });
       }
     } catch (error) {
-      console.error('❌ Error loading quote:', error);
+      console.error('Error loading quote:', error);
       setQuote({ 
         text: 'Discipline is the bridge between goals and accomplishment.', 
         author: 'Jim Rohn' 
@@ -139,10 +144,8 @@ export default function HomeScreen() {
   };
 
   const refreshQuote = async () => {
-    console.log('🔄 Refreshing quote...');
     setIsRefreshingQuote(true);
     
-    // Animate the refresh icon
     Animated.timing(quoteSpinAnim, {
       toValue: 1,
       duration: 500,
@@ -152,19 +155,13 @@ export default function HomeScreen() {
       quoteSpinAnim.setValue(0);
     });
 
-    // Get a random quote instead of quote of day
     try {
       const quoteData = await statisticsService.getRandomQuote();
-      console.log('🔄 New quote:', quoteData);
-      
       if (quoteData && quoteData.text) {
-        setQuote({
-          text: quoteData.text,
-          author: quoteData.author || 'Unknown',
-        });
+        setQuote({ text: quoteData.text, author: quoteData.author || 'Unknown' });
       }
     } catch (error) {
-      console.error('❌ Error refreshing quote:', error);
+      console.error('Error refreshing quote:', error);
     } finally {
       setIsRefreshingQuote(false);
     }
@@ -175,14 +172,12 @@ export default function HomeScreen() {
     try {
       const today = getLocalDate();
       
-      // Load data separately to handle errors better
       await Promise.all([
         fetchHabits(),
         fetchTodayLogs(today),
         fetchRoutines(),
       ]);
 
-      // Get stats with fallback
       let stats = { habits: { total: 0, completed: 0 }, routines: { total: 0, completed: 0 } };
       try {
         stats = await statisticsService.getTodayStats(today);
@@ -190,7 +185,6 @@ export default function HomeScreen() {
         console.error('Error getting stats:', error);
       }
 
-      // Get streak with fallback
       let streak = 0;
       try {
         streak = await statisticsService.getCurrentStreak();
@@ -198,7 +192,6 @@ export default function HomeScreen() {
         console.error('Error getting streak:', error);
       }
 
-      // Get routines with fallback
       let routinesToday = [];
       try {
         routinesToday = await statisticsService.getTodayRoutines(today);
@@ -206,7 +199,6 @@ export default function HomeScreen() {
         console.error('Error getting routines:', error);
       }
 
-      // Safely calculate progress
       const totalHabits = stats?.habits?.total ?? 0;
       const completedHabitsCount = stats?.habits?.completed ?? 0;
       const progress = totalHabits > 0 ? (completedHabitsCount / totalHabits) * 100 : 0;
@@ -220,7 +212,6 @@ export default function HomeScreen() {
       setIsLoading(false);
     }
     
-    // Load quote separately
     await loadQuote();
   };
 
@@ -253,34 +244,10 @@ export default function HomeScreen() {
   };
 
   const quickActions = [
-    {
-      icon: 'add-circle-outline',
-      title: 'New Habit',
-      subtitle: 'Build consistency',
-      route: '/habit/create',
-      color: theme.colors.primary,
-    },
-    {
-      icon: 'list-outline',
-      title: 'New Routine',
-      subtitle: 'Create flow',
-      route: '/routine/create',
-      color: theme.colors.success,
-    },
-    {
-      icon: 'alert-circle-outline',
-      title: 'Log Excuse',
-      subtitle: 'Track patterns',
-      route: '/excuses',
-      color: theme.colors.danger,
-    },
-    {
-      icon: 'stats-chart-outline',
-      title: 'Statistics',
-      subtitle: 'View insights',
-      route: '/statistics',
-      color: theme.colors.warning,
-    },
+    { icon: 'add-circle-outline', title: 'New Habit', route: '/habit/create', gradient: ['#667eea', '#764ba2'] },
+    { icon: 'list-outline', title: 'New Routine', route: '/routine/create', gradient: ['#28B67A', '#1a8a5c'] },
+    { icon: 'alert-circle-outline', title: 'Log Excuse', route: '/excuses', gradient: ['#F05D5E', '#c0392b'] },
+    { icon: 'stats-chart-outline', title: 'Statistics', route: '/statistics', gradient: ['#F4A340', '#d68910'] },
   ];
 
   const completedHabits = habits.filter(h => todayLogs[h.id]?.status === 'completed').length;
@@ -293,13 +260,13 @@ export default function HomeScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
           <ProgressRing progress={0} size={120} strokeWidth={10}>
-            <Ionicons name="flame" size={32} color={theme.colors.warning} />
+            <Ionicons name="flame" size={32} color={colors.warning} />
           </ProgressRing>
         </Animated.View>
-        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
           Loading your progress...
         </Text>
       </View>
@@ -307,15 +274,15 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
       >
@@ -326,12 +293,27 @@ export default function HomeScreen() {
           }}
         >
           {/* Header */}
-          <View style={styles.header}>
+          <Animated.View 
+            style={[
+              styles.header,
+              {
+                opacity: headerAnim,
+                transform: [
+                  { 
+                    translateY: headerAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-20, 0],
+                    }) 
+                  },
+                ],
+              },
+            ]}
+          >
             <View style={styles.headerText}>
-              <Text style={[styles.greeting, { color: theme.colors.text }]}>
+              <Text style={[styles.greeting, { color: colors.text }]}>
                 {getGreeting()} 👋
               </Text>
-              <Text style={[styles.date, { color: theme.colors.textSecondary }]}>
+              <Text style={[styles.date, { color: colors.textSecondary }]}>
                 {new Date().toLocaleDateString('en-US', { 
                   weekday: 'long', 
                   month: 'long', 
@@ -340,58 +322,81 @@ export default function HomeScreen() {
               </Text>
             </View>
             <Pressable 
-              onPress={() => router.push('/profile')}
-              style={({ pressed }) => [
-                styles.avatarButton, 
-                { 
-                  backgroundColor: theme.colors.primary,
-                  transform: [{ scale: pressed ? 0.9 : 1 }],
-                }
-              ]}
-            >
-              <Ionicons name="person" size={24} color="#fff" />
-            </Pressable>
-          </View>
+  onPress={() => router.push('/profile')}
+  style={({ pressed }) => [
+    { transform: [{ scale: pressed ? 0.9 : 1 }] },
+  ]}
+>
+  <LinearGradient
+    colors={[colors.primary, colors.secondary]}
+    style={styles.avatarButton}
+  >
+    <Image 
+      source={require('../../assets/HF3.png')} 
+      style={styles.avatarImage}
+      resizeMode="cover"
+    />
+  </LinearGradient>
+</Pressable>
+          </Animated.View>
 
           {/* Progress Card */}
-          <View style={[styles.progressCard, { backgroundColor: theme.colors.card }]}>
-            <View style={styles.progressSection}>
-              <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-                <ProgressRing progress={todayProgress} size={170} strokeWidth={15}>
-                  <Text style={[styles.progressPercent, { color: theme.colors.text }]}>
-                    {todayProgress.toFixed(0)}%
-                  </Text>
-                  <Text style={[styles.progressLabel, { color: theme.colors.textSecondary }]}>
-                    Today's Progress
-                  </Text>
-                </ProgressRing>
-              </Animated.View>
-              
-              <View style={styles.progressStats}>
-                <View style={[styles.statBadge, { backgroundColor: theme.colors.success + '15' }]}>
-                  <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
-                  <Text style={[styles.statText, { color: theme.colors.text }]}>
-                    {completedHabits} Done
-                  </Text>
-                </View>
-                <View style={[styles.statBadge, { backgroundColor: theme.colors.warning + '15' }]}>
-                  <Ionicons name="time-outline" size={16} color={theme.colors.warning} />
-                  <Text style={[styles.statText, { color: theme.colors.text }]}>
-                    {remainingHabits} Left
-                  </Text>
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <LinearGradient
+              colors={[colors.primary + '15', colors.secondary + '10']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.progressCard}
+            >
+              <View style={styles.progressSection}>
+                <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                  <ProgressRing progress={todayProgress} size={160} strokeWidth={14}>
+                    <Text style={[styles.progressPercent, { color: colors.text }]}>
+                      {todayProgress.toFixed(0)}%
+                    </Text>
+                    <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>
+                      Complete
+                    </Text>
+                  </ProgressRing>
+                </Animated.View>
+                
+                <View style={styles.progressStatsRow}>
+                  <View style={[styles.progressStatItem, { backgroundColor: colors.success + '15' }]}>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                    <View>
+                      <Text style={[styles.progressStatValue, { color: colors.success }]}>
+                        {completedHabits}
+                      </Text>
+                      <Text style={[styles.progressStatLabel, { color: colors.textSecondary }]}>
+                        Done
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={[styles.progressStatItem, { backgroundColor: colors.warning + '15' }]}>
+                    <Ionicons name="time-outline" size={20} color={colors.warning} />
+                    <View>
+                      <Text style={[styles.progressStatValue, { color: colors.warning }]}>
+                        {remainingHabits}
+                      </Text>
+                      <Text style={[styles.progressStatLabel, { color: colors.textSecondary }]}>
+                        Remaining
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </View>
-            </View>
-          </View>
+            </LinearGradient>
+          </Animated.View>
 
           {/* Streak Card */}
-          <View style={styles.streakSection}>
+          <Animated.View style={{ opacity: fadeAnim }}>
             <StreakCard currentStreak={currentStreak} bestStreak={currentStreak} />
-          </View>
+          </Animated.View>
 
           {/* Quick Actions */}
           <View style={styles.quickActionsSection}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Quick Actions
             </Text>
             <View style={styles.quickActionsGrid}>
@@ -401,13 +406,16 @@ export default function HomeScreen() {
                   style={[
                     styles.quickActionWrapper,
                     {
-                      opacity: fadeAnim,
+                      opacity: quickActionsAnim[index],
                       transform: [
                         { 
-                          translateY: slideAnim.interpolate({
-                            inputRange: [0, 30],
-                            outputRange: [0, 30 + (index % 2) * 10],
+                          translateY: quickActionsAnim[index].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [30, 0],
                           }) 
+                        },
+                        {
+                          scale: quickActionsAnim[index],
                         },
                       ],
                     },
@@ -416,25 +424,22 @@ export default function HomeScreen() {
                   <Pressable
                     onPress={() => router.push(action.route)}
                     style={({ pressed }) => [
-                      styles.quickAction,
-                      { 
-                        backgroundColor: theme.colors.card,
-                        borderColor: action.color + '30',
-                        transform: [{ scale: pressed ? 0.95 : 1 }],
-                      },
+                      { transform: [{ scale: pressed ? 0.95 : 1 }] },
                     ]}
                   >
-                    <View style={[styles.quickIcon, { backgroundColor: action.color + '15' }]}>
-                      <Ionicons name={action.icon as any} size={26} color={action.color} />
-                    </View>
-                    <View style={styles.quickActionText}>
-                      <Text style={[styles.quickTitle, { color: theme.colors.text }]}>
+                    <LinearGradient
+                      colors={action.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.quickAction}
+                    >
+                      <View style={styles.quickIcon}>
+                        <Ionicons name={action.icon as any} size={26} color="#fff" />
+                      </View>
+                      <Text style={styles.quickTitle}>
                         {action.title}
                       </Text>
-                      <Text style={[styles.quickSubtitle, { color: theme.colors.textSecondary }]}>
-                        {action.subtitle}
-                      </Text>
-                    </View>
+                    </LinearGradient>
                   </Pressable>
                 </Animated.View>
               ))}
@@ -443,13 +448,13 @@ export default function HomeScreen() {
 
           {/* Today's Routines */}
           {todayRoutines.length > 0 && (
-            <View style={styles.routinesSection}>
+            <Animated.View style={[styles.routinesSection, { opacity: fadeAnim }]}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
                   Today's Routines
                 </Text>
                 <Pressable onPress={() => router.push('/routines')}>
-                  <Text style={[styles.seeAll, { color: theme.colors.primary }]}>
+                  <Text style={[styles.seeAll, { color: colors.primary }]}>
                     View All
                   </Text>
                 </Pressable>
@@ -479,28 +484,43 @@ export default function HomeScreen() {
                       style={({ pressed }) => [
                         styles.routineCard,
                         { 
-                          backgroundColor: routine.color || theme.colors.primary,
+                          backgroundColor: colors.card,
+                          borderColor: colors.border,
+                          borderWidth: 1,
                           transform: [{ scale: pressed ? 0.98 : 1 }],
+                          elevation: 2,
+                          shadowColor: '#000',
+                          shadowOpacity: 0.05,
+                          shadowRadius: 4,
+                          shadowOffset: { width: 0, height: 2 },
                         },
                       ]}
                     >
                       <View style={styles.routineHeader}>
-                        <Ionicons name={routine.icon as any} size={22} color="#fff" />
+                        <View style={[styles.routineIcon, { backgroundColor: routine.color + '20' }]}>
+                          <Ionicons name={routine.icon as any} size={20} color={routine.color} />
+                        </View>
                         <View style={styles.routineInfo}>
-                          <Text style={styles.routineName}>{routine.name}</Text>
-                          <Text style={styles.routineStats}>
+                          <Text style={[styles.routineName, { color: colors.text }]}>
+                            {routine.name}
+                          </Text>
+                          <Text style={[styles.routineStats, { color: colors.textSecondary, paddingBottom: 4 }]}>
                             {routine.completed_tasks} of {routine.total_tasks} tasks
                           </Text>
                         </View>
-                        <Text style={styles.routineProgress}>{progress.toFixed(0)}%</Text>
+                        <View style={[styles.routinePercentBadge, { backgroundColor: routine.color + '15' }]}>
+                          <Text style={[styles.routinePercentText, { color: routine.color }]}>
+                            {progress.toFixed(0)}%
+                          </Text>
+                        </View>
                       </View>
-                      <View style={styles.routineProgressBar}>
+                      <View style={[styles.routineProgressBar, { backgroundColor: colors.border }]}>
                         <Animated.View 
                           style={[
                             styles.routineProgressFill, 
                             { 
                               width: `${progress}%`,
-                              backgroundColor: '#fff',
+                              backgroundColor: routine.color || colors.primary,
                             },
                           ]} 
                         />
@@ -509,17 +529,17 @@ export default function HomeScreen() {
                   </Animated.View>
                 );
               })}
-            </View>
+            </Animated.View>
           )}
 
           {/* Today's Habits */}
-          <View style={styles.habitsSection}>
+          <Animated.View style={[styles.habitsSection, { opacity: fadeAnim }]}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
                 Today's Habits
               </Text>
               <Pressable onPress={() => router.push('/habits')}>
-                <Text style={[styles.seeAll, { color: theme.colors.primary }]}>
+                <Text style={[styles.seeAll, { color: colors.primary }]}>
                   See All
                 </Text>
               </Pressable>
@@ -528,10 +548,10 @@ export default function HomeScreen() {
             {habits.length === 0 ? (
               <Pressable
                 onPress={() => router.push('/habit/create')}
-                style={[styles.emptyCard, { backgroundColor: theme.colors.card }]}
+                style={[styles.emptyCard, { backgroundColor: colors.card }]}
               >
-                <Ionicons name="add-circle-outline" size={40} color={theme.colors.primary} />
-                <Text style={[styles.emptyText, { color: theme.colors.text }]}>
+                <Ionicons name="add-circle-outline" size={40} color={colors.primary} />
+                <Text style={[styles.emptyText, { color: colors.text }]}>
                   Create your first habit
                 </Text>
               </Pressable>
@@ -560,27 +580,32 @@ export default function HomeScreen() {
                       style={({ pressed }) => [
                         styles.habitItem,
                         { 
-                          backgroundColor: theme.colors.card,
+                          backgroundColor: colors.card,
                           transform: [{ scale: pressed ? 0.98 : 1 }],
-                          borderColor: isCompleted ? theme.colors.success : theme.colors.border + '50',
+                          borderColor: isCompleted ? colors.success : colors.border + '50',
+                          elevation: 2,
+                          shadowColor: '#000',
+                          shadowOpacity: 0.05,
+                          shadowRadius: 4,
+                          shadowOffset: { width: 0, height: 2 },
                         },
                       ]}
                     >
-                      <View style={[styles.habitIcon, { backgroundColor: theme.colors.primary + '15' }]}>
-                        <Ionicons name={habit.icon as any} size={20} color={theme.colors.primary} />
+                      <View style={[styles.habitIcon, { backgroundColor: colors.primary + '15' }]}>
+                        <Ionicons name={habit.icon as any} size={20} color={colors.primary} />
                       </View>
                       <View style={styles.habitContent}>
                         <Text style={[
                           styles.habitName, 
                           { 
-                            color: theme.colors.text,
+                            color: colors.text,
                             textDecorationLine: isCompleted ? 'line-through' : 'none',
                             opacity: isCompleted ? 0.6 : 1,
                           },
                         ]}>
                           {habit.name}
                         </Text>
-                        <Text style={[styles.habitMeta, { color: theme.colors.textSecondary }]}>
+                        <Text style={[styles.habitMeta, { color: colors.textSecondary }]}>
                           {habit.frequency_type} • {habit.target_count}x
                         </Text>
                       </View>
@@ -590,15 +615,16 @@ export default function HomeScreen() {
                         style={[
                           styles.completeButton,
                           {
-                            backgroundColor: isCompleted ? theme.colors.success : 'transparent',
-                            borderColor: isCompleted ? theme.colors.success : theme.colors.border,
+                            backgroundColor: isCompleted ? colors.success : 'transparent',
+                            borderColor: isCompleted ? colors.success : colors.border,
+                            marginRight: 4,
                           },
                         ]}
                       >
                         <Ionicons 
                           name={isCompleted ? 'checkmark' : 'ellipse-outline'} 
                           size={20} 
-                          color={isCompleted ? '#fff' : theme.colors.textSecondary} 
+                          color={isCompleted ? '#fff' : colors.textSecondary} 
                         />
                       </Pressable>
                     </Pressable>
@@ -606,14 +632,14 @@ export default function HomeScreen() {
                 );
               })
             )}
-          </View>
+          </Animated.View>
 
           {/* Quote Section */}
-          <View style={styles.quoteSection}>
+          <Animated.View style={[styles.quoteSection, { opacity: fadeAnim }]}>
             <View style={styles.sectionHeader}>
               <View style={styles.quoteHeaderLeft}>
-                <Ionicons name="sparkles" size={20} color={theme.colors.warning} />
-                <Text style={[styles.sectionTitle, { color: theme.colors.text, marginBottom: 0, marginLeft: 8 }]}>
+                <Ionicons name="sparkles" size={18} color={colors.warning} />
+                <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0, marginLeft: 8 }]}>
                   Daily Inspiration
                 </Text>
               </View>
@@ -624,24 +650,19 @@ export default function HomeScreen() {
                 style={({ pressed }) => [
                   styles.refreshQuoteButton,
                   { 
-                    backgroundColor: theme.colors.primary + '10',
+                    backgroundColor: colors.primary + '10',
                     opacity: pressed || isRefreshingQuote ? 0.5 : 1,
                   },
                 ]}
               >
                 <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                  <Ionicons 
-                    name="refresh" 
-                    size={20} 
-                    color={theme.colors.primary} 
-                  />
+                  <Ionicons name="refresh" size={18} color={colors.primary} />
                 </Animated.View>
               </Pressable>
             </View>
             <QuoteCard quote={quote.text} author={quote.author} />
-          </View>
+          </Animated.View>
 
-          {/* Bottom Spacing */}
           <View style={{ height: 100 }} />
         </Animated.View>
       </ScrollView>
@@ -658,18 +679,9 @@ function getGreeting() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 14,
-  },
+  container: { flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 16, fontSize: 14 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -678,250 +690,150 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
   },
-  headerText: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  date: {
-    fontSize: 15,
-  },
+  headerText: { flex: 1 },
+  greeting: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 },
+  date: { fontSize: 15 },
   avatarButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-  },
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  alignItems: 'center',
+  justifyContent: 'center',
+  elevation: 3,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowRadius: 5,
+  shadowOffset: { width: 0, height: 2 },
+  overflow: 'hidden',
+},
+avatarImage: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+},
+
   progressCard: {
     marginHorizontal: 20,
     borderRadius: 24,
     padding: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
     marginBottom: 20,
   },
-  progressSection: {
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  progressPercent: {
-    fontSize: 38,
-    fontWeight: 'bold',
-  },
-  progressLabel: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  progressStats: {
+  progressSection: { alignItems: 'center', paddingVertical: 8 },
+  progressPercent: { fontSize: 36, fontWeight: '800' },
+  progressLabel: { fontSize: 13, marginTop: 4, fontWeight: '500' },
+  progressStatsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 16,
+    marginTop: 20,
+    width: '100%',
   },
-  statBadge: {
+  progressStatItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
+    padding: 12,
+    borderRadius: 12,
+    gap: 10,
   },
-  statText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  streakSection: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  quickActionsSection: {
-    paddingHorizontal: 16,
-    marginTop: 28,
-  },
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: '600',
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
+  progressStatValue: { fontSize: 18, fontWeight: '700' },
+  progressStatLabel: { fontSize: 11, marginTop: 1 },
+  streakSection: { marginTop: 20, paddingHorizontal: 20 },
+  quickActionsSection: { paddingHorizontal: 16, marginTop: 28 },
+  sectionTitle: { fontSize: 19, fontWeight: '700', marginBottom: 16, paddingHorizontal: 4 },
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 12,
   },
-  quickActionWrapper: {
-    width: '47%',
-    marginBottom: 4,
-  },
+  quickActionWrapper: { width: '47%', marginBottom: 4 },
   quickAction: {
     width: '100%',
     borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
+    padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    minHeight: 130,
+    minHeight: 100,
   },
   quickIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  quickActionText: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  quickTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  quickSubtitle: {
-    fontSize: 11,
-    textAlign: 'center',
-    flexShrink: 1,
-  },
-  routinesSection: {
-    paddingHorizontal: 20,
-    marginTop: 28,
-  },
+  quickTitle: { fontSize: 14, fontWeight: '700', color: '#fff', textAlign: 'center' },
+  routinesSection: { paddingHorizontal: 20, marginTop: 28 },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  seeAll: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  seeAll: { fontSize: 14, fontWeight: '600' },
   routineCard: {
-    padding: 16,
+    padding: 14,
     borderRadius: 16,
     marginBottom: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
   },
   routineHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 10,
   },
-  routineInfo: {
-    flex: 1,
+  routineIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  routineName: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  routineInfo: { flex: 1 },
+  routineName: { fontSize: 15, fontWeight: '600' },
+  routineStats: { fontSize: 11, marginTop: 2 },
+  routinePercentBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  routineStats: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  routineProgress: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  routineProgressBar: {
-    height: 5,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  routineProgressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  habitsSection: {
-    paddingHorizontal: 20,
-    marginTop: 28,
-  },
+  routinePercentText: { fontSize: 13, fontWeight: '700' },
+  routineProgressBar: { height: 4, borderRadius: 2, overflow: 'hidden' },
+  routineProgressFill: { height: '100%', borderRadius: 2 },
+  habitsSection: { paddingHorizontal: 20, marginTop: 28 },
   habitItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    padding: 12,
     borderRadius: 16,
     marginBottom: 10,
     borderWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
   },
   habitIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
-  habitContent: {
-    flex: 1,
-  },
-  habitName: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 3,
-  },
-  habitMeta: {
-    fontSize: 12,
-  },
+  habitContent: { flex: 1 },
+  habitName: { fontSize: 15, fontWeight: '600', marginBottom: 3 },
+  habitMeta: { fontSize: 12 },
   completeButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
   },
-  emptyCard: {
-    padding: 24,
-    borderRadius: 16,
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  quoteSection: {
-    paddingHorizontal: 20,
-    marginTop: 28,
-  },
-  quoteHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  emptyCard: { padding: 24, borderRadius: 16, alignItems: 'center', gap: 8 },
+  emptyText: { fontSize: 15, fontWeight: '500' },
+  quoteSection: { paddingHorizontal: 20, marginTop: 28 },
+  quoteHeaderLeft: { flexDirection: 'row', alignItems: 'center' },
   refreshQuoteButton: {
     width: 36,
     height: 36,

@@ -9,7 +9,7 @@ export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
-  const { loadSettings, onboardingCompleted } = useSettingsStore();
+  const { loadSettings, settings } = useSettingsStore();
 
   const setupDatabase = async () => {
     try {
@@ -78,28 +78,39 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        
+        {/* Modal screens */}
         <Stack.Screen 
-          name="(auth)" 
-          options={{ headerShown: false }}
-          redirect={onboardingCompleted}
+          name="habit/create" 
+          options={{ presentation: 'modal', title: 'Create Habit', headerShown: true }} 
         />
         <Stack.Screen 
-          name="(tabs)" 
-          options={{ headerShown: false }}
+          name="habit/edit" 
+          options={{ presentation: 'modal', title: 'Edit Habit', headerShown: true }} 
         />
-        <Stack.Screen name="habit/create" options={{ presentation: 'modal', title: 'Create Habit' }} />
-        <Stack.Screen name="habit/[id]" options={{ title: 'Habit Details' }} />
-        <Stack.Screen name="habit/edit" options={{ presentation: 'modal', title: 'Edit Habit' }} />
-        <Stack.Screen name="routine/create" options={{ presentation: 'modal', title: 'Create Routine' }} />
-        <Stack.Screen name="routine/[id]" options={{ title: 'Routine Details' }} />
-        <Stack.Screen name="routine/edit" options={{ presentation: 'modal', title: 'Edit Routine' }} />
-        <Stack.Screen name="excuses/index" options={{ title: 'Excuse Log' }} />
-        <Stack.Screen name="excuses/create" options={{ presentation: 'modal', title: 'Log Excuse' }} />
-        <Stack.Screen name="excuses/[id]" options={{ title: 'Excuse Details' }} />
-        <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
-        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen 
+          name="routine/create" 
+          options={{ presentation: 'modal', title: 'Create Routine', headerShown: true }} 
+        />
+        <Stack.Screen 
+          name="excuses/create" 
+          options={{ presentation: 'modal', title: 'Log Excuse', headerShown: true }} 
+        />
+        
+        {/* Regular screens */}
+        <Stack.Screen name="habit/[id]" options={{ title: 'Habit Details', headerShown: true }} />
+        <Stack.Screen name="routine/[id]" options={{ title: 'Routine Details', headerShown: true }} />
+        <Stack.Screen name="excuses/index" options={{ title: 'Excuse Log', headerShown: true }} />
+        <Stack.Screen name="excuses/[id]" options={{ title: 'Excuse Details', headerShown: true }} />
+        <Stack.Screen name="achievements" options={{ title: 'Achievements', headerShown: true }} />
+        <Stack.Screen name="settings" options={{ title: 'Settings', headerShown: true }} />
+        
+        {/* Custom screens without header */}
         <Stack.Screen name="streaks" options={{ headerShown: false }} />
         <Stack.Screen name="notifications-settings" options={{ headerShown: false }} />
+        <Stack.Screen name="data-management" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

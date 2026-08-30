@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { lightTheme } from '../../theme';
 
 interface PrimaryButtonProps {
   title: string;
@@ -15,7 +16,9 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   disabled = false,
   style,
 }) => {
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors;
 
   return (
     <Pressable
@@ -24,7 +27,7 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       style={({ pressed }) => [
         styles.button,
         {
-          backgroundColor: disabled ? '#ccc' : theme.colors.primary,
+          backgroundColor: disabled ? '#ccc' : colors.primary,
           opacity: pressed ? 0.8 : 1,
         },
         style,

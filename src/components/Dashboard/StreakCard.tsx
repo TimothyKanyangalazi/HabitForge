@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
+import { lightTheme } from '../../theme';
 
 interface StreakCardProps {
   currentStreak: number;
@@ -12,21 +13,23 @@ export const StreakCard: React.FC<StreakCardProps> = ({
   currentStreak,
   bestStreak,
 }) => {
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.colors.warning + '15' }]}>
+    <View style={[styles.card, { backgroundColor: colors.warning + '15' }]}>
       <View style={styles.flameContainer}>
-        <Ionicons name="flame" size={48} color={theme.colors.warning} />
+        <Ionicons name="flame" size={48} color={colors.warning} />
       </View>
       <View style={styles.content}>
-        <Text style={[styles.streakNumber, { color: theme.colors.warning }]}>
+        <Text style={[styles.streakNumber, { color: colors.warning }]}>
           {currentStreak}
         </Text>
-        <Text style={[styles.streakLabel, { color: theme.colors.text }]}>
+        <Text style={[styles.streakLabel, { color: colors.text }]}>
           Day Streak
         </Text>
-        <Text style={[styles.bestStreak, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.bestStreak, { color: colors.textSecondary }]}>
           Best: {bestStreak} days
         </Text>
       </View>

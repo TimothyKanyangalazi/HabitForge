@@ -5,10 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useExcuseStore } from '../../src/stores/excuseStore';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { Excuse } from '../../src/types';
+import { lightTheme } from '../../src/theme';
 
 export default function ExcuseDetailScreen() {
   const { id } = useLocalSearchParams();
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   const { getExcuseById, deleteExcuse } = useExcuseStore();
   const [excuse, setExcuse] = useState<Excuse | null>(null);
 

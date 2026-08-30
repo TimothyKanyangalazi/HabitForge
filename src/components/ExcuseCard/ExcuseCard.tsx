@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { Excuse } from '../../types';
-
+import { lightTheme } from '../../theme';
 interface ExcuseCardProps {
   excuse: Excuse & { count?: number };
   onPress?: () => void;
@@ -15,7 +15,9 @@ export const ExcuseCard: React.FC<ExcuseCardProps> = ({
   onPress,
   showCount = false,
 }) => {
-  const theme = useTheme();
+   const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
 
   return (
     <Pressable

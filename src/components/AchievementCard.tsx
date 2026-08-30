@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Achievement } from '../types';
+import { lightTheme } from '../theme';
 
 interface AchievementCardProps {
   achievement: Achievement;
@@ -17,7 +18,9 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
   unlockedAt,
   onPress,
 }) => {
-  const theme = useTheme();
+   const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
 
   return (
     <Pressable

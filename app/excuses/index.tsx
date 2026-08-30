@@ -6,9 +6,12 @@ import { useExcuseStore } from '../../src/stores/excuseStore';
 import { ExcuseCard } from '../../src/components/ExcuseCard/ExcuseCard';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { Excuse } from '../../src/types';
+import { lightTheme } from '../../src/theme';
 
 export default function ExcusesListScreen() {
-  const theme = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   const { excuses, mostCommonExcuses, fetchExcuses, fetchMostCommon, deleteExcuse } = useExcuseStore();
   const [refreshing, setRefreshing] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { Habit, HabitLog } from '../../types';
+import { lightTheme } from '../../theme';
 
 interface HabitCardProps {
   habit: Habit;
@@ -19,7 +20,9 @@ export const HabitCard: React.FC<HabitCardProps> = ({
   onComplete,
   onLongPress,
 }) => {
-  const theme = useTheme();
+   const themeContext = useTheme();
+  const theme = themeContext?.theme || lightTheme;
+  const colors = theme.colors || lightTheme.colors;
   const isCompleted = log?.status === 'completed';
   const isMissed = log?.status === 'missed';
 
