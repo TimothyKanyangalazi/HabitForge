@@ -17,6 +17,8 @@ export async function resetDatabase() {
     
     // Drop all tables in correct order (respecting foreign keys)
     const tables = [
+      'urges',
+      'relapses',
       'routine_logs',
       'habit_logs',
       'user_achievements',

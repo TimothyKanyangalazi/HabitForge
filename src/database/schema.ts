@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS habits (
     description TEXT,
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     icon TEXT,
+    color TEXT,
     frequency_type TEXT NOT NULL DEFAULT 'daily',
     selected_days TEXT,
     reminder_time TEXT,
@@ -137,4 +138,37 @@ CREATE INDEX IF NOT EXISTS idx_habit_logs_habit ON habit_logs(habit_id);
 CREATE INDEX IF NOT EXISTS idx_routine_tasks_routine ON routine_tasks(routine_id);
 CREATE INDEX IF NOT EXISTS idx_routine_logs_date ON routine_logs(log_date);
 CREATE INDEX IF NOT EXISTS idx_excuses_category ON excuses(category);
+`;
+export const CREATE_URGES_TABLE = `
+  CREATE TABLE IF NOT EXISTS urges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    habit_id INTEGER NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+    logged_at TEXT NOT NULL,
+    intensity INTEGER NOT NULL,
+    trigger TEXT,
+    outcome TEXT NOT NULL,
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`;
+
+export const CREATE_RELAPSES_TABLE = `
+  CREATE TABLE IF NOT EXISTS relapses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    habit_id INTEGER NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+    relapse_date TEXT NOT NULL,
+    trigger TEXT,
+    notes TEXT,
+    recovery_plan TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`;
+
+export const CREATE_URGES_INDEXES = `
+  CREATE INDEX IF NOT EXISTS idx_urges_habit ON urges(habit_id);
+  CREATE INDEX IF NOT EXISTS idx_urges_date  ON urges(logged_at);
+`;
+
+export const CREATE_RELAPSES_INDEXES = `
+  CREATE INDEX IF NOT EXISTS idx_relapses_habit ON relapses(habit_id);
 `;

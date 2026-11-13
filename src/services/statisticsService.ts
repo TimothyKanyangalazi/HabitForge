@@ -1,6 +1,79 @@
 import { getDatabase } from '../database/database';
+import { relapseService } from './relapseService';
+
+async function getBreakHabitTotal(perDayColumn: 'cost_per_day' | 'time_per_day_minutes'): Promise<number> {
+  const db = getDatabase();
+  const habits = await db.getAllAsync<{ id: number; per_day: number | null }>(
+    `SELECT id, ${perDayColumn} AS per_day
+     FROM habits
+     WHERE habit_type = 'break' AND archived = 0`
+  );
+  const totals = await Promise.all(habits.map(async habit =>
+    (habit.per_day || 0) * await relapseService.getDaysClean(habit.id)
+  ));
+  return totals.reduce((sum, total) => sum + total, 0);
+}
 
 export const statisticsService = {
+
+  async getBreakHabitStats(habitId: number): Promise<{
+    daysClean: number;
+    longestCleanStreak: number;
+    urgesResisted: number;
+    totalUrges: number;
+    resistRate: number;
+    moneySaved: number;
+    timeReclaimedMinutes: number;
+  }> {
+    const db = getDatabase();
+    const habit = await db.getFirstAsync<{
+      habit_type: string;
+      cost_per_day: number | null;
+      time_per_day_minutes: number | null;
+    }>('SELECT habit_type, cost_per_day, time_per_day_minutes FROM habits WHERE id = ?', [habitId]);
+    if (!habit || habit.habit_type !== 'break') {
+      return {
+        daysClean: 0,
+        longestCleanStreak: 0,
+        urgesResisted: 0,
+        totalUrges: 0,
+        resistRate: 0,
+        moneySaved: 0,
+        timeReclaimedMinutes: 0,
+      };
+    }
+
+    const [daysClean, longestCleanStreak, urgeCounts] = await Promise.all([
+      relapseService.getDaysClean(habitId),
+      relapseService.getLongestCleanStreak(habitId),
+      db.getFirstAsync<{ total: number; resisted: number }>(
+        `SELECT COUNT(*) AS total,
+                COALESCE(SUM(CASE WHEN outcome = 'resisted' THEN 1 ELSE 0 END), 0) AS resisted
+         FROM urges WHERE habit_id = ?`,
+        [habitId]
+      ),
+    ]);
+    const totalUrges = urgeCounts?.total || 0;
+    const urgesResisted = urgeCounts?.resisted || 0;
+
+    return {
+      daysClean,
+      longestCleanStreak,
+      urgesResisted,
+      totalUrges,
+      resistRate: totalUrges > 0 ? (urgesResisted / totalUrges) * 100 : 0,
+      moneySaved: daysClean * (habit.cost_per_day || 0),
+      timeReclaimedMinutes: daysClean * (habit.time_per_day_minutes || 0),
+    };
+  },
+
+  async getTotalSavings(): Promise<number> {
+    return getBreakHabitTotal('cost_per_day');
+  },
+
+  async getTotalTimeReclaimed(): Promise<number> {
+    return getBreakHabitTotal('time_per_day_minutes');
+  },
 
   async getTotalHabitsCompleted(): Promise<number> {
     try {
