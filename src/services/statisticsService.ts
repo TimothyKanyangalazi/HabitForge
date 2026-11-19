@@ -1,6 +1,29 @@
 import { getDatabase } from '../database/database';
 import { relapseService } from './relapseService';
 
+const DEFAULT_QUOTE = {
+  text: 'Discipline is the bridge between goals and accomplishment.',
+  author: 'Jim Rohn',
+};
+
+async function getRandomQuoteIncludingFavorites(): Promise<{
+  text: string;
+  author: string | null;
+}> {
+  const db = getDatabase();
+  const quote = await db.getFirstAsync<{ text: string; author: string | null }>(
+    `SELECT text, author
+     FROM (
+       SELECT text, author FROM quotes
+       UNION ALL
+       SELECT text, author FROM favorite_quotes
+     )
+     ORDER BY RANDOM()
+     LIMIT 1`
+  );
+  return quote ?? DEFAULT_QUOTE;
+}
+
 async function getBreakHabitTotal(perDayColumn: 'cost_per_day' | 'time_per_day_minutes'): Promise<number> {
   const db = getDatabase();
   const habits = await db.getAllAsync<{ id: number; per_day: number | null }>(
@@ -444,95 +467,22 @@ async getExcusePatterns() {
   },
 
   // Get quote of the day
- async getQuoteOfDay() {
+  async getQuoteOfDay() {
     try {
-      const db = getDatabase();
-      
-      // Get total count of quotes
-      const countResult = await db.getAllAsync<{ count: number }>(
-        'SELECT COUNT(*) as count FROM quotes'
-      );
-      
-      const totalQuotes = countResult[0]?.count || 0;
-      console.log('Total quotes in database:', totalQuotes);
-      
-      if (totalQuotes === 0) {
-        console.log('No quotes found, using default');
-        return { 
-          text: 'Discipline is the bridge between goals and accomplishment.', 
-          author: 'Jim Rohn' 
-        };
-      }
-      
-      // Get a random quote
-      const randomIndex = Math.floor(Math.random() * totalQuotes);
-      console.log('Fetching random quote at index:', randomIndex);
-      
-      const result = await db.getAllAsync<{
-        text: string;
-        author: string;
-      }>(
-        'SELECT text, author FROM quotes LIMIT 1 OFFSET ?',
-        [randomIndex]
-      );
-      
-      console.log('Quote result:', result);
-      
-      if (result[0] && result[0].text) {
-        return result[0];
-      }
-      
-      return { 
-        text: 'Discipline is the bridge between goals and accomplishment.', 
-        author: 'Jim Rohn' 
-      };
+      return await getRandomQuoteIncludingFavorites();
     } catch (error) {
       console.error('Error getting quote:', error);
-      return { 
-        text: 'Discipline is the bridge between goals and accomplishment.', 
-        author: 'Jim Rohn' 
-      };
+      return DEFAULT_QUOTE;
     }
   },
 
   // Get random quote (different from quote of day)
   async getRandomQuote() {
     try {
-      const db = getDatabase();
-      
-      const countResult = await db.getAllAsync<{ count: number }>(
-        'SELECT COUNT(*) as count FROM quotes'
-      );
-      
-      const totalQuotes = countResult[0]?.count || 0;
-      
-      if (totalQuotes === 0) {
-        return { 
-          text: 'Discipline is the bridge between goals and accomplishment.', 
-          author: 'Jim Rohn' 
-        };
-      }
-      
-      const randomIndex = Math.floor(Math.random() * totalQuotes);
-      
-      const result = await db.getAllAsync<{
-        text: string;
-        author: string;
-      }>(
-        'SELECT text, author FROM quotes LIMIT 1 OFFSET ?',
-        [randomIndex]
-      );
-      
-      return result[0] || { 
-        text: 'Discipline is the bridge between goals and accomplishment.', 
-        author: 'Jim Rohn' 
-      };
+      return await getRandomQuoteIncludingFavorites();
     } catch (error) {
       console.error('Error getting random quote:', error);
-      return { 
-        text: 'Discipline is the bridge between goals and accomplishment.', 
-        author: 'Jim Rohn' 
-      };
+      return DEFAULT_QUOTE;
     }
   },
 

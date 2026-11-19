@@ -28,7 +28,7 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({
         style={styles.card}
       >
         <View style={styles.quoteIconContainer}>
-          <Ionicons name="quote" size={30} color="rgba(255,255,255,0.5)" />
+          <Ionicons name="chatbubble-ellipses" size={30} color="rgba(255,255,255,0.5)" />
         </View>
         
         <Text style={styles.quoteText}>

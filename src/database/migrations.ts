@@ -132,6 +132,21 @@ const migrations: Migration[] = [
       await addColumnIfMissing(db, 'habits', 'color', 'TEXT');
     },
   },
+  {
+    version: 4,
+    name: 'favorite_quotes',
+    up: async (db) => {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS favorite_quotes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          text TEXT NOT NULL CHECK (length(trim(text)) > 0),
+          author TEXT NOT NULL DEFAULT '',
+          created_at TEXT DEFAULT (datetime('now')),
+          UNIQUE (text COLLATE NOCASE, author COLLATE NOCASE)
+        );
+      `);
+    },
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────

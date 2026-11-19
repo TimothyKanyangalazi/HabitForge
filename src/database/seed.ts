@@ -83,7 +83,8 @@ export async function seedDatabase(db: SQLiteDatabase) {
       ('weekly_review_day', 'Sunday'),
       ('onboarding_completed', 'false'),
       ('user_xp', '0'),
-      ('user_level', '1');
+      ('user_level', '1'),
+      ('living_motto', '');
     `);
 
     console.log('Database seeded successfully');

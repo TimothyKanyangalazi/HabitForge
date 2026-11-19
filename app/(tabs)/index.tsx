@@ -505,7 +505,7 @@ export default function HomeScreen() {
                   <Ionicons name="person" size={22} color="#fff" />
                 ) : (
                   <Image
-                    source={require('../../assets/HF3.png')}
+                    source={require('../../assets/HF2.png')}
                     style={styles.avatarImage}
                     resizeMode="cover"
                     onError={() => setAvatarError(true)}
@@ -514,6 +514,26 @@ export default function HomeScreen() {
               </LinearGradient>
             </Pressable>
           </Animated.View>
+
+          {!!settings.livingMotto?.trim() && (
+            <Animated.View
+              style={[
+                styles.mottoCard,
+                { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' },
+                { opacity: headerAnim },
+              ]}
+            >
+              <Ionicons name="compass-outline" size={20} color={colors.primary} />
+              <View style={styles.mottoTextContainer}>
+                <Text style={[styles.mottoLabel, { color: colors.primary }]}>
+                  MY LIVING MOTTO
+                </Text>
+                <Text style={[styles.mottoText, { color: colors.text }]}>
+                  {settings.livingMotto}
+                </Text>
+              </View>
+            </Animated.View>
+          )}
 
           {/* ── Progress card (build habits only) ──────────── */}
           <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
@@ -1381,6 +1401,29 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatarImage: { width: 40, height: 40, borderRadius: 20 },
+
+  mottoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  mottoTextContainer: { flex: 1 },
+  mottoLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 5,
+  },
+  mottoText: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '600',
+  },
 
   progressCard: {
     marginHorizontal: 20,

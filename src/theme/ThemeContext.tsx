@@ -1,10 +1,44 @@
-import react,{createContext, useContext} from 'react';
-import {theme} from './index';
+import React, { createContext, useContext } from 'react';
+import { useSettingsStore } from '../stores/settingsStore';
+import { theme, Theme } from './index';
 
-const ThemeContext = createContext(theme);
+interface ThemeContextValue extends Theme {
+  theme: Theme;
+  isDark: boolean;
+  toggleTheme: () => Promise<void>;
+}
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({children}) => {
-  return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
+const darkTheme: Theme = {
+  ...theme,
+  colors: {
+    ...theme.colors,
+    background: '#121212',
+    card: '#1E1E1E',
+    text: '#F5F5F5',
+    textSecondary: '#B3B3B3',
+    border: '#383838',
+  },
 };
 
-export const useTheme = () => useContext(ThemeContext);
+const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { settings, updateSettings } = useSettingsStore();
+  const isDark = settings.theme === 'dark';
+  const activeTheme = isDark ? darkTheme : theme;
+  const toggleTheme = () => updateSettings({ theme: isDark ? 'light' : 'dark' });
+
+  return (
+    <ThemeContext.Provider value={{ ...activeTheme, theme: activeTheme, isDark, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};

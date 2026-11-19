@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Image } from 'react-native';
 import { router } from 'expo-router';
 import { PrimaryButton } from '../../src/components/common/PrimaryButton';
 import { SelectionCard } from '../../src/components/common/SelectionCard';
@@ -63,6 +63,9 @@ export default function OnboardingScreen() {
   };
 
   const handleFinish = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
     try {
       // Save preferences
       await updateSettings({
@@ -72,11 +75,7 @@ export default function OnboardingScreen() {
       
       // Mark onboarding as complete
       await completeOnboarding();
-      
-      // Use setTimeout to ensure state is updated before navigation
-      setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 100);
+      router.replace('/(tabs)');
     } catch (error) {
       console.error('Error completing onboarding:', error);
       Alert.alert('Error', 'Failed to save preferences. Please try again.');
@@ -176,6 +175,14 @@ export default function OnboardingScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={styles.brandContainer}>
+        <Image
+          source={require('../../assets/HF2.png')}
+          style={styles.brandIcon}
+          resizeMode="contain"
+          accessibilityLabel="HabitForge icon"
+        />
+      </View>
       <View style={styles.progressContainer}>
         {[1, 2, 3].map(i => (
           <View
@@ -197,14 +204,19 @@ export default function OnboardingScreen() {
         {step < 3 ? (
           <PrimaryButton title="Next" onPress={handleNext} style={styles.button} />
         ) : (
-          <PrimaryButton title="Start Tracking" onPress={handleFinish} style={styles.button} />
+          <PrimaryButton
+            title={isSubmitting ? 'Saving...' : 'Start Tracking'}
+            onPress={handleFinish}
+            style={styles.button}
+            disabled={isSubmitting}
+          />
         )}
         
         {step > 1 && (
           <PrimaryButton
             title="Back"
             onPress={() => setStep(step - 1)}
-            style={[styles.button, styles.backButton]}
+            style={{ ...styles.button, ...styles.backButton }}
           />
         )}
       </View>
@@ -216,6 +228,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
+  },
+  brandContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  brandIcon: {
+    width: 56,
+    height: 56,
   },
   progressContainer: {
     flexDirection: 'row',

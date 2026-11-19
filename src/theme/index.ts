@@ -8,4 +8,6 @@ export const theme = {
   spacing,
 };
 
+export const lightTheme = theme;
+
 export type Theme = typeof theme;

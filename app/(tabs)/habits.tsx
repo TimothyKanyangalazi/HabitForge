@@ -56,7 +56,7 @@ function streakColor(days: number, colors: Record<string, string>): string {
 
 export default function HabitsScreen() {
   const themeContext = useTheme();
-  const theme = themeContext?.theme || lightTheme;
+  const theme = themeContext ?? lightTheme;
   const colors = theme.colors || lightTheme.colors;
   const textMuted = colors.textMuted ?? colors.textSecondary ?? '#6B7280';
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PrimaryButton } from '../../src/components/common/PrimaryButton';
 import { useTheme } from '../../src/theme/ThemeContext';
@@ -37,9 +37,12 @@ export default function WelcomeScreen() {
         ]}
       >
         <View style={styles.logoContainer}>
-          <View style={[styles.logoCircle, { backgroundColor: theme.colors.primary }]}>
-            <Text style={styles.logoText}>HF</Text>
-          </View>
+          <Image
+            source={require('../../assets/HF2.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+            accessibilityLabel="HabitForge icon"
+          />
         </View>
 
         <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -97,17 +100,9 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginBottom: 24,
   },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoText: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#fff',
+  logoImage: {
+    width: 144,
+    height: 144,
   },
   title: {
     fontSize: 36,

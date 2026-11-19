@@ -34,6 +34,45 @@ export interface HabitInput {
   time_per_day_minutes?: number;
 }
 
+export interface FavoriteQuote {
+  id: number;
+  text: string;
+  author: string;
+  created_at: string;
+}
+
+export interface Routine {
+  id: number;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  color?: string | null;
+  start_time?: string | null;
+  days?: string | null;
+  archived?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RoutineTask {
+  id: number;
+  routine_id: number;
+  habit_id?: number | null;
+  task_name: string;
+  order_index: number;
+  duration_minutes: number;
+  created_at: string;
+}
+
+export interface RoutineLog {
+  id: number;
+  routine_task_id: number;
+  log_date: string;
+  status: 'completed' | 'missed' | 'skipped';
+  completed_at?: string | null;
+  created_at: string;
+}
+
 // ============================================================
 // Urges
 // ============================================================

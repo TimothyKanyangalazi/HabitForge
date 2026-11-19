@@ -11,6 +11,7 @@ interface SettingsState {
     onboardingCompleted: boolean;
     userXp: number;
     userLevel: number;
+    livingMotto: string;
   };
   isLoading: boolean;
   
@@ -28,6 +29,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     onboardingCompleted: false,
     userXp: 0,
     userLevel: 1,
+    livingMotto: '',
   },
   isLoading: false,
 
@@ -42,6 +44,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         'onboarding_completed',
         'user_xp',
         'user_level',
+        'living_motto',
       ]);
 
       set({
@@ -53,6 +56,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
           onboardingCompleted: loadedSettings.onboarding_completed === 'true',
           userXp: parseInt(loadedSettings.user_xp || '0'),
           userLevel: parseInt(loadedSettings.user_level || '1'),
+          livingMotto: loadedSettings.living_motto || '',
         },
       });
     } catch (error) {
@@ -78,6 +82,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       if (updates.weeklyReviewDay !== undefined) {
         settingsToSave.weekly_review_day = updates.weeklyReviewDay;
       }
+      if (updates.livingMotto !== undefined) {
+        settingsToSave.living_motto = updates.livingMotto;
+      }
       
       await settingsService.setMultiple(settingsToSave);
       
@@ -89,6 +96,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       }));
     } catch (error) {
       console.error('Error updating settings:', error);
+      throw error;
     }
   },
 
@@ -103,6 +111,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       }));
     } catch (error) {
       console.error('Error completing onboarding:', error);
+      throw error;
     }
   },
 }));

@@ -7,6 +7,8 @@ import { getDatabase } from '../database/database';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -137,6 +139,35 @@ export const notificationService = {
       minute,
       repeat: 'daily',
       data: { type: 'routine', routineId },
+    });
+  },
+
+  async scheduleRoutineTaskCompletion(
+    routineId: number,
+    routineName: string,
+    taskId: number,
+    taskName: string,
+    endsAt: number
+  ): Promise<string | null> {
+    let { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      ({ status } = await Notifications.requestPermissionsAsync());
+    }
+
+    if (status !== 'granted') return null;
+
+    return await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Task complete',
+        body: `${taskName} in ${routineName} is complete.`,
+        data: { type: 'routine_task_complete', routineId, taskId },
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: Math.max(1, Math.ceil((endsAt - Date.now()) / 1000)),
+        repeats: false,
+      },
     });
   },
 

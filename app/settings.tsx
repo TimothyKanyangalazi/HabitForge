@@ -51,7 +51,7 @@ const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 export default function SettingsScreen() {
   // ── Theme ──
-  const themeCtx = useTheme() as any;
+  const themeCtx = useTheme();
   const { isDark, toggleTheme } = themeCtx;
   const theme: any = themeCtx?.theme ?? themeCtx ?? lightTheme;
   const raw: Record<string, string> = theme?.colors ?? lightTheme.colors;
@@ -198,7 +198,12 @@ export default function SettingsScreen() {
               </View>
               <Switch
                 value={!!isDark}
-                onValueChange={toggleTheme}
+                onValueChange={() => {
+                  void toggleTheme().catch((error: unknown) => {
+                    console.error('Error toggling theme:', error);
+                    setSaveError('Could not save the theme setting.');
+                  });
+                }}
                 trackColor={{ false: colors.border, true: '#9C27B080' }}
                 thumbColor={isDark ? '#9C27B0' : '#f4f3f4'}
                 accessibilityLabel="Toggle dark mode"

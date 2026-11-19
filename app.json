@@ -2,9 +2,9 @@
   "expo": {
     "name": "HabitForge",
     "slug": "HabitForge",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/HF2.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -12,8 +12,8 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-     "scheme": "habitforge",
-       "ios": {
+    "scheme": "habitforge",
+    "ios": {
       "supportsTablet": true
     },
     "android": {
@@ -26,11 +26,20 @@
       "package": "com.starhasty.habitforge"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/HF2.png"
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
-    ]
+      "expo-sqlite",
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-font"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b929658a-0475-4591-82f7-27fec7dc34df"
+      }
+    }
   }
 }

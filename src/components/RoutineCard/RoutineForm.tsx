@@ -164,7 +164,9 @@ export const RoutineForm: React.FC<RoutineFormProps> = ({
               style={[
                 styles.iconButton,
                 {
-                  backgroundColor: icon === iconName ? color : '#f5f5f5',
+                  backgroundColor: icon === iconName ? color : theme.colors.card,
+                  borderWidth: icon === iconName ? 0 : 1,
+                  borderColor: theme.colors.border,
                 },
               ]}
             >

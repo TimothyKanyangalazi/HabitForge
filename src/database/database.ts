@@ -28,6 +28,7 @@ export async function resetDatabase() {
       'excuses',
       'achievements',
       'notifications',
+      'favorite_quotes',
       'quotes',
       'categories',
       'settings',
@@ -36,18 +37,17 @@ export async function resetDatabase() {
 
     // Disable foreign keys temporarily
     await database.execAsync('PRAGMA foreign_keys = OFF');
-    
-    for (const table of tables) {
-      try {
+
+    try {
+      for (const table of tables) {
         await database.execAsync(`DROP TABLE IF EXISTS ${table}`);
         console.log(`Dropped table: ${table}`);
-      } catch (error) {
-        console.warn(`Could not drop table ${table}:`, error);
       }
+
+      await database.execAsync('PRAGMA user_version = 0');
+    } finally {
+      await database.execAsync('PRAGMA foreign_keys = ON');
     }
-    
-    // Re-enable foreign keys
-    await database.execAsync('PRAGMA foreign_keys = ON');
     
     console.log('Database reset complete');
   } catch (error) {

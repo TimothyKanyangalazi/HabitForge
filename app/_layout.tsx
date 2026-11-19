@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ThemeProvider } from '../src/theme/ThemeContext';
-import { initDatabase, resetDatabase, getDatabase } from '../src/database/database';
+import { closeDatabase, initDatabase, resetDatabase } from '../src/database/database';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSettingsStore } from '../src/stores/settingsStore';
 
@@ -9,7 +9,7 @@ export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
-  const { loadSettings, onboardingCompleted } = useSettingsStore();
+  const { loadSettings, settings } = useSettingsStore();
 
   const setupDatabase = async () => {
     try {
@@ -34,9 +34,7 @@ export default function RootLayout() {
       setDbError(null);
       setDbReady(false);
       
-      const db = getDatabase();
-      await db.closeAsync();
-      
+      await closeDatabase();
       await resetDatabase();
       await setupDatabase();
       
@@ -81,7 +79,7 @@ export default function RootLayout() {
         <Stack.Screen 
           name="(auth)" 
           options={{ headerShown: false }}
-          redirect={onboardingCompleted}
+          redirect={settings.onboardingCompleted}
         />
         <Stack.Screen 
           name="(tabs)" 
